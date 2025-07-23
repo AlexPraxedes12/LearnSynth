@@ -10,9 +10,10 @@ load_dotenv(env_path)
 client = anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
 
 def ask_llm(prompt: str) -> str:
-    response = client.completions.create(
-        model='claude-3-haiku-20240307',
-        max_tokens_to_sample=1024,
-        prompt=f"{anthropic.HUMAN_PROMPT} {prompt} {anthropic.AI_PROMPT}"
+    response = client.messages.create(
+        model="claude-3-haiku-20240307",
+        max_tokens=1024,
+        system="You are a helpful assistant.",
+        messages=[{"role": "user", "content": prompt}],
     )
-    return response.completion.strip()
+    return response.content[0].text.strip()
