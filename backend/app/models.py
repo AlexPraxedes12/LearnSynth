@@ -11,6 +11,11 @@ class ConceptMapInput(BaseModel):
     """Text input for concept map generation."""
     text: str = Field(..., example="Introduction to machine learning")
 
+# New request model for the concept map image endpoint
+class ConceptMapRequest(BaseModel):
+    """Request body for generating a concept map image."""
+    text: str
+
 class ReviewInput(BaseModel):
     """Feedback provided when reviewing a flashcard."""
     feedback: str = Field(..., example="easy")

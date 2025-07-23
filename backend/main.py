@@ -1,5 +1,5 @@
 from fastapi import FastAPI, UploadFile, File, Body, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 import logging
 from typing import List
 
@@ -8,6 +8,7 @@ from app.services import srs, concept_map, exporter, tts
 from app.models import (
     Flashcard,
     ConceptMapInput,
+    ConceptMapRequest,
     ReviewInput,
     ExportInput,
     TTSInput,
@@ -87,15 +88,12 @@ def create_concept_map(data: ConceptMapInput = Body(...)):
 
 
 @app.post('/concept-map/image')
-def concept_map_img(data: ConceptMapInput = Body(...)):
-    """Return an image (PNG) representing the generated concept map."""
+def concept_map_img(data: ConceptMapRequest = Body(...)):
+    """Generate a concept map from text and return a PNG image."""
     try:
         cmap = concept_map.generate_concept_map(data.text)
         img = concept_map.concept_map_image(cmap)
-        file_path = '/tmp/concept_map.png'
-        with open(file_path, 'wb') as f:
-            f.write(img)
-        return FileResponse(file_path, media_type='image/png')
+        return Response(content=img, media_type='image/png')
     except Exception as exc:
         logger.exception("Failed to create concept map image: %s", exc)
         raise HTTPException(status_code=500, detail="Internal server error")
