@@ -16,7 +16,7 @@ WORKDIR /app
 COPY ./backend ./backend
 
 # Install python dependencies
-RUN pip install --no-cache-dir fastapi uvicorn[standard] openai gtts \
+RUN pip install --no-cache-dir fastapi uvicorn[standard] anthropic python-dotenv gtts \
     spacy beautifulsoup4 weasyprint markdown graphviz
 
 # Download spaCy model
