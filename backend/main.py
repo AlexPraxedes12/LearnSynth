@@ -104,16 +104,14 @@ def concept_map_img(data: ConceptMapRequest = Body(...)):
 def export_course(data: ExportInput = Body(...)):
     """Export Markdown content to `md`, `txt` or `pdf` format."""
     try:
-        result = exporter.export_content(data.content, data.fmt)
         if data.fmt == 'pdf':
-            file_path = '/tmp/export.pdf'
-            with open(file_path, 'wb') as f:
-                f.write(result)
+            path = exporter.export_to_pdf_file(data.content)
             return FileResponse(
-                file_path,
+                path,
                 media_type='application/pdf',
-                background=BackgroundTask(os.remove, file_path),
+                background=BackgroundTask(os.remove, path),
             )
+        result = exporter.export_content(data.content, data.fmt)
         return {'content': result}
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
