@@ -8,8 +8,7 @@ app = FastAPI()
 
 @app.post('/generate')
 async def generate(file: UploadFile = File(...)):
-    contents = await file.read()
-    return generate_course(contents)
+    return generate_course(file)
 
 
 @app.post('/flashcards')
