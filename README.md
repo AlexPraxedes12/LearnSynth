@@ -19,4 +19,10 @@ AI-powered interactive course generator from documents.
 uvicorn backend.main:app --reload
 ```
 
+Create a `.env` file inside the `backend` directory with your Claude API key:
+
+```
+ANTHROPIC_API_KEY=your-key-here
+```
+
 The React frontend can be served from `frontend/` as usual.
