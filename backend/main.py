@@ -1,14 +1,24 @@
-from fastapi import FastAPI, UploadFile, File, Body
+from fastapi import FastAPI, UploadFile, File, Body, HTTPException
 from fastapi.responses import FileResponse
+import logging
 from app.services.generator import generate_course
 from app.services import srs, concept_map, exporter, tts
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
 
 @app.post('/generate')
 async def generate(file: UploadFile = File(...)):
-    return generate_course(file)
+    try:
+        return generate_course(file)
+    except HTTPException as exc:
+        raise exc
+    except Exception as exc:
+        logger.exception("Unexpected error generating course: %s", exc)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.post('/flashcards')
