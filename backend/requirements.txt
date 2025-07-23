@@ -2,3 +2,4 @@ python-multipart
 PyMuPDF
 anthropic
 openai
+tiktoken

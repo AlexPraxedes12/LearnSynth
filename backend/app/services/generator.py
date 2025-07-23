@@ -3,7 +3,13 @@ from io import BytesIO
 import fitz  # PyMuPDF
 import logging
 
-from app.utils.llm import ask_llm
+from app.utils.llm import (
+    ask_llm,
+    split_text_into_chunks,
+    truncate_text_to_tokens,
+    estimate_tokens,
+    MAX_MODEL_TOKENS,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +21,7 @@ def generate_course(file: UploadFile = File(...)):
     filename = (file.filename or '').lower()
     content_type = (file.content_type or '').lower()
 
+    # Read the uploaded file contents
     data = file.file.read()
     size = len(data)
     logger.info("Processing file '%s' (%d bytes)", filename, size)
@@ -23,6 +30,7 @@ def generate_course(file: UploadFile = File(...)):
         logger.error("File too large: %d bytes", size)
         raise HTTPException(status_code=400, detail="File too large")
 
+    # Handle plain text files
     if filename.endswith('.txt') and 'text/plain' in content_type:
         try:
             try:
@@ -36,6 +44,7 @@ def generate_course(file: UploadFile = File(...)):
             logger.exception("Error decoding text: %s", e)
             raise HTTPException(status_code=422, detail="Error decoding text")
 
+    # Handle PDF files
     elif filename.endswith('.pdf') and 'pdf' in content_type:
         try:
             pdf_data = BytesIO(data)
@@ -48,6 +57,36 @@ def generate_course(file: UploadFile = File(...)):
     else:
         raise HTTPException(status_code=400, detail="Only .txt or .pdf files are supported")
 
-    prompt = f"Generate a concise course outline from the following content:\n\n{contents}"
-    summary = ask_llm(prompt)
-    return {"course": summary}
+    # Ensure the content stays within the model's limits
+    token_count = estimate_tokens(contents)
+    truncated = False
+    if token_count > MAX_MODEL_TOKENS:
+        contents = truncate_text_to_tokens(contents, MAX_MODEL_TOKENS)
+        truncated = True
+        token_count = estimate_tokens(contents)
+
+    # Split the input into manageable chunks for the LLM
+    try:
+        chunks = split_text_into_chunks(contents, max_tokens=10_000)
+    except ValueError as exc:
+        logger.error("Unable to split text: %s", exc)
+        raise HTTPException(status_code=400, detail="File too large to process")
+
+    partial_summaries = []  # Store each chunk summary
+    for chunk in chunks:
+        prompt = (
+            "Summarize the following part of a course document:\n\n" + chunk
+        )
+        partial_summaries.append(ask_llm(prompt))
+
+    # Combine partial summaries and ask for a final overall summary
+    aggregated = "\n".join(partial_summaries)
+    final_prompt = (
+        "Combine these summaries into a coherent course outline:\n\n" + aggregated
+    )
+    final_summary = ask_llm(final_prompt)
+    # Include a warning if we had to cut off the input text
+    result = {"course": final_summary}
+    if truncated:
+        result["warning"] = "Input text truncated to fit token limit."
+    return result
