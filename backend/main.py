@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI()
 
 
-@app.post('/generate')
+@app.post('/generate', tags=["Generation"])
 async def generate(file: UploadFile = File(...)):
     """Generate a course outline from an uploaded PDF or text file."""
     try:
@@ -33,7 +33,7 @@ async def generate(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@app.post('/flashcards')
+@app.post('/flashcards', tags=["Flashcards"])
 def save_flashcards(
     cards: List[Flashcard] = Body(
         ...,
@@ -58,7 +58,7 @@ def save_flashcards(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@app.get('/flashcards/due')
+@app.get('/flashcards/due', tags=["Flashcards"])
 def due_flashcards():
     """Return flashcards that are due for review."""
     try:
@@ -68,7 +68,7 @@ def due_flashcards():
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@app.post('/flashcards/{card_id}/review')
+@app.post('/flashcards/{card_id}/review', tags=["Flashcards"])
 def review_flashcard(card_id: str, review: ReviewInput = Body(...)):
     """Record review feedback for a given flashcard."""
     try:
@@ -78,7 +78,7 @@ def review_flashcard(card_id: str, review: ReviewInput = Body(...)):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@app.post('/concept-map')
+@app.post('/concept-map', tags=["Concept Map"])
 def create_concept_map(data: ConceptMapInput = Body(...)):
     """Generate a concept map from the provided text."""
     try:
@@ -88,7 +88,7 @@ def create_concept_map(data: ConceptMapInput = Body(...)):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@app.post('/concept-map/image')
+@app.post('/concept-map/image', tags=["Concept Map"])
 def concept_map_img(data: ConceptMapRequest = Body(...)):
     """Generate a concept map from text and return a PNG image."""
     try:
@@ -100,7 +100,7 @@ def concept_map_img(data: ConceptMapRequest = Body(...)):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@app.post('/export')
+@app.post('/export', tags=["Export"])
 def export_course(data: ExportInput = Body(...)):
     """Export Markdown content to `md`, `txt` or `pdf` format."""
     try:
@@ -122,7 +122,7 @@ def export_course(data: ExportInput = Body(...)):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@app.post('/tts')
+@app.post('/tts', tags=["Text-to-Speech"])
 def text_to_speech(data: TTSInput = Body(...)):
     """Convert text into an MP3 audio file."""
     try:
