@@ -9,6 +9,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgdk-pixbuf2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
+# Tools for OCR and PDF conversion
+RUN apt-get update && apt-get install -y poppler-utils tesseract-ocr
+
 # Set workdir
 WORKDIR /app
 
