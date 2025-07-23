@@ -3,3 +3,5 @@ PyMuPDF
 anthropic
 openai
 tiktoken
+pdf2image
+pytesseract
