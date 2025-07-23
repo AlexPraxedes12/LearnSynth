@@ -11,7 +11,7 @@ client = anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
 
 def ask_llm(prompt: str) -> str:
     response = client.completions.create(
-        model='claude-2',
+        model='claude-3-haiku-20240307',
         max_tokens_to_sample=1024,
         prompt=f"{anthropic.HUMAN_PROMPT} {prompt} {anthropic.AI_PROMPT}"
     )
