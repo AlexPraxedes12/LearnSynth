@@ -1,5 +1,6 @@
-from fastapi import FastAPI, UploadFile, File, Body, HTTPException
+from fastapi import FastAPI, UploadFile, File, Body, HTTPException, BackgroundTask
 from fastapi.responses import FileResponse, Response
+import os
 import logging
 from typing import List
 
@@ -108,7 +109,11 @@ def export_course(data: ExportInput = Body(...)):
             file_path = '/tmp/export.pdf'
             with open(file_path, 'wb') as f:
                 f.write(result)
-            return FileResponse(file_path, media_type='application/pdf')
+            return FileResponse(
+                file_path,
+                media_type='application/pdf',
+                background=BackgroundTask(os.remove, file_path),
+            )
         return {'content': result}
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
@@ -122,7 +127,11 @@ def text_to_speech(data: TTSInput = Body(...)):
     """Convert text into an MP3 audio file."""
     try:
         path = tts.text_to_speech(data.text)
-        return FileResponse(path, media_type='audio/mpeg')
+        return FileResponse(
+            path,
+            media_type='audio/mpeg',
+            background=BackgroundTask(os.remove, path),
+        )
     except Exception as exc:
         logger.exception("Text-to-speech failed: %s", exc)
         raise HTTPException(status_code=500, detail="Internal server error")
