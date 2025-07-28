@@ -27,21 +27,16 @@ environment:
 # dependencies can be manually updated by changing the version numbers below to
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
+
 dependencies:
   flutter:
     sdk: flutter
-    plugin:
-      platforms:
-        android:
-          default_package: file_picker
-    
 
   # Allows picking local files for the mocked upload flow.
-  file_picker: ^6.1.1
-  provider: ^6.0.5
   record: ^5.0.0
-  path_provider: ^2.1.5
-  permission_handler: ^11.3.0
+  file_picker: ^6.2.1
+  path_provider: ^2.1.1
+  provider: ^6.1.1
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -63,6 +58,14 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
+  plugin:
+    platforms:
+      windows:
+        default_package: file_picker
+      linux:
+        default_package: file_picker
+      macos:
+        default_package: file_picker
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
