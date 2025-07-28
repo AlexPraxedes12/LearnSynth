@@ -7,20 +7,19 @@ import '../constants.dart';
 /// screen. We use [Navigator.pushNamed] here rather than
 /// [Navigator.pushReplacementNamed] so that the user can navigate
 /// back if desired.
-class ProcessingScreen extends StatefulWidget {
+class LoadingScreen extends StatefulWidget {
   final String? text;
-  const ProcessingScreen({super.key, this.text});
+  const LoadingScreen({super.key, this.text});
 
   @override
-  State<ProcessingScreen> createState() => _ProcessingScreenState();
+  State<LoadingScreen> createState() => _LoadingScreenState();
 }
 
-class _ProcessingScreenState extends State<ProcessingScreen> {
+class _LoadingScreenState extends State<LoadingScreen> {
   @override
   void initState() {
     super.initState();
-    // Shortened delay to keep the demo snappy.
-    Future.delayed(const Duration(seconds: 2), () {
+    Future.delayed(const Duration(seconds: 3), () {
       if (mounted) {
         Navigator.pushNamed(
           context,
@@ -34,7 +33,7 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Processing')),
+      appBar: AppBar(title: const Text('Loading')),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

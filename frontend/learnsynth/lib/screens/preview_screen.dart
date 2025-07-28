@@ -10,11 +10,7 @@ class PreviewScreen extends StatelessWidget {
   const PreviewScreen({super.key, required this.text});
 
   void _startAnalysis(BuildContext context) {
-    Navigator.pushNamed(
-      context,
-      Routes.processing,
-      arguments: text,
-    );
+    Navigator.pushNamed(context, Routes.loading, arguments: text);
   }
 
   @override
