@@ -15,7 +15,8 @@ class Routes {
   static const String progress = '/progress';
   static const String addContent = '/add-content';
   static const String pdfPicker = '/pdf-picker';
-  static const String audioRecorder = '/audio-recorder';
+  static const String audio = '/audio';
   static const String videoPicker = '/video-picker';
   static const String projects = '/projects';
+  static const String processing = '/processing';
 }
