@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../widgets/method_card.dart';
 import '../constants.dart';
 
+/// Lists the available study methods. Each card navigates to its
+/// corresponding screen using a named route.
 class MethodSelectionScreen extends StatelessWidget {
   const MethodSelectionScreen({super.key});
 
@@ -17,8 +19,7 @@ class MethodSelectionScreen extends StatelessWidget {
               icon: Icons.lightbulb_outline,
               title: 'Deep Understanding',
               description: 'Listen to explanations and see concept maps.',
-              onTap: () =>
-                  Navigator.pushNamed(context, Routes.deepUnderstanding),
+              onTap: () => Navigator.pushNamed(context, Routes.deepUnderstanding),
             ),
             MethodCard(
               icon: Icons.memory,
@@ -30,15 +31,13 @@ class MethodSelectionScreen extends StatelessWidget {
               icon: Icons.share,
               title: 'Contextual Association',
               description: 'Relate concepts to real-life scenarios.',
-              onTap: () =>
-                  Navigator.pushNamed(context, Routes.contextualAssociation),
+              onTap: () => Navigator.pushNamed(context, Routes.contextualAssociation),
             ),
             MethodCard(
               icon: Icons.quiz,
               title: 'Interactive Evaluation',
               description: 'Answer quiz questions to test knowledge.',
-              onTap: () =>
-                  Navigator.pushNamed(context, Routes.interactiveEvaluation),
+              onTap: () => Navigator.pushNamed(context, Routes.interactiveEvaluation),
             ),
           ],
         ),

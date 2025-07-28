@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
+/// Displays a motivational quote in a colored card. Copied from the
+/// upstream repository to maintain consistent styling.
 class QuoteCard extends StatelessWidget {
   final String quote;
   const QuoteCard({super.key, required this.quote});

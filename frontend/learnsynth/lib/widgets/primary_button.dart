@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
+/// A simple primary button used throughout the app. Adapted from the
+/// upstream repository. Applies consistent styling and full‑width layout.
 class PrimaryButton extends StatelessWidget {
   final String label;
   final VoidCallback onPressed;

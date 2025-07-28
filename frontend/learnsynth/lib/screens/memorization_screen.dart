@@ -3,6 +3,9 @@ import '../widgets/flashcard_widget.dart';
 import '../widgets/primary_button.dart';
 import '../constants.dart';
 
+/// Presents flashcard‑style activities for memorization. Buttons for
+/// grading difficulty are included. Completion navigates to the
+/// progress screen via [Navigator.pushNamed].
 class MemorizationScreen extends StatelessWidget {
   const MemorizationScreen({super.key});
 
@@ -30,9 +33,8 @@ class MemorizationScreen extends StatelessWidget {
             const SizedBox(height: 16),
             PrimaryButton(
               label: 'Complete Session',
-              onPressed: () =>
-                  Navigator.pushReplacementNamed(context, Routes.progress),
-            )
+              onPressed: () => Navigator.pushNamed(context, Routes.progress),
+            ),
           ],
         ),
       ),

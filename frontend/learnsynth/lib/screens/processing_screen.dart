@@ -3,6 +3,11 @@ import '../widgets/quote_card.dart';
 import '../widgets/primary_button.dart';
 import '../constants.dart';
 
+/// Shows a loading state while content is being processed. Once the
+/// processing is complete, the user can proceed to the analysis
+/// screen. We use [Navigator.pushNamed] here rather than
+/// [Navigator.pushReplacementNamed] so that the user can navigate
+/// back if desired.
 class ProcessingScreen extends StatelessWidget {
   const ProcessingScreen({super.key});
 
@@ -20,9 +25,8 @@ class ProcessingScreen extends StatelessWidget {
             const SizedBox(height: 20),
             PrimaryButton(
               label: 'View Analysis',
-              onPressed: () =>
-                  Navigator.pushReplacementNamed(context, Routes.analysis),
-            )
+              onPressed: () => Navigator.pushNamed(context, Routes.analysis),
+            ),
           ],
         ),
       ),

@@ -3,6 +3,9 @@ import '../widgets/progress_summary_card.dart';
 import '../widgets/primary_button.dart';
 import '../constants.dart';
 
+/// Displays summary statistics for the user’s progress. The "Back to
+/// Home" button now uses [Navigator.pushNamedAndRemoveUntil] to clear
+/// the navigation stack and return to the home screen cleanly.
 class ProgressScreen extends StatelessWidget {
   const ProgressScreen({super.key});
 
@@ -22,8 +25,11 @@ class ProgressScreen extends StatelessWidget {
             const SizedBox(height: 16),
             PrimaryButton(
               label: 'Back to Home',
-              onPressed: () =>
-                  Navigator.pushReplacementNamed(context, Routes.home),
+              onPressed: () => Navigator.pushNamedAndRemoveUntil(
+                context,
+                Routes.home,
+                (route) => false,
+              ),
             ),
           ],
         ),

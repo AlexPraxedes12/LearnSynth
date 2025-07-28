@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
+/// A card used on the method selection screen. Shows an icon,
+/// a title and description. On tap it executes a callback. Based on
+/// upstream implementation.
 class MethodCard extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -32,9 +35,10 @@ class MethodCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title,
-                        style: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold)),
+                    Text(
+                      title,
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
                     const SizedBox(height: 4),
                     Text(
                       description,
@@ -42,7 +46,7 @@ class MethodCard extends StatelessWidget {
                     ),
                   ],
                 ),
-              )
+              ),
             ],
           ),
         ),

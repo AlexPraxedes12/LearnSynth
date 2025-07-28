@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
+/// A card that displays a multiple‑choice question. Users can select
+/// an answer by tapping radio buttons. The selected index is stored
+/// internally. Based on the upstream implementation.
 class QuizQuestionCard extends StatefulWidget {
   final String question;
   final List<String> choices;
@@ -28,9 +31,10 @@ class _QuizQuestionCardState extends State<QuizQuestionCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(widget.question,
-                style:
-                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            Text(
+              widget.question,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 12),
             ...List.generate(widget.choices.length, (index) {
               return RadioListTile<int>(
@@ -40,7 +44,7 @@ class _QuizQuestionCardState extends State<QuizQuestionCard> {
                 groupValue: _selected,
                 onChanged: (val) => setState(() => _selected = val),
               );
-            })
+            }),
           ],
         ),
       ),

@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 
+/// Provides the dark theme used throughout the app. Copying this
+/// implementation from the upstream repository ensures visual
+/// consistency. You can tweak primary and accent colors here to
+/// match your design needs.
 class AppTheme {
   AppTheme._();
 
@@ -25,4 +29,3 @@ class AppTheme {
     );
   }
 }
-

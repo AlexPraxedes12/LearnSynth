@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
+/// A simple flashcard widget that toggles between showing the question
+/// and the answer when tapped. Adapted from the upstream repository.
 class FlashcardWidget extends StatefulWidget {
   final String question;
   final String answer;

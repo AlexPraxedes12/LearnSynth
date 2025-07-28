@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'constants.dart';
 import 'theme/app_theme.dart';
 import 'screens/home_screen.dart';
@@ -26,6 +27,10 @@ class StudyApp extends StatelessWidget {
       theme: AppTheme.darkTheme,
       initialRoute: Routes.home,
       routes: {
+        // Map each named route to its corresponding screen. Note that
+        // it’s important to keep this list in sync with the definitions
+        // in constants.dart. Also avoid using replacement navigation in
+        // the routes table.
         Routes.home: (_) => const MainNavigation(),
         Routes.processing: (_) => const ProcessingScreen(),
         Routes.analysis: (_) => const AnalysisScreen(),

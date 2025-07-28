@@ -3,6 +3,9 @@ import '../widgets/quiz_question_card.dart';
 import '../widgets/primary_button.dart';
 import '../constants.dart';
 
+/// Presents an interactive quiz. After submitting answers, the user can
+/// complete the session which navigates to the progress screen using
+/// [Navigator.pushNamed].
 class InteractiveEvaluationScreen extends StatelessWidget {
   const InteractiveEvaluationScreen({super.key});
 
@@ -24,8 +27,7 @@ class InteractiveEvaluationScreen extends StatelessWidget {
             const SizedBox(height: 16),
             PrimaryButton(
               label: 'Complete Session',
-              onPressed: () =>
-                  Navigator.pushReplacementNamed(context, Routes.progress),
+              onPressed: () => Navigator.pushNamed(context, Routes.progress),
             ),
           ],
         ),

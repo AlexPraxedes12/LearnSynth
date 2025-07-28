@@ -1,3 +1,6 @@
+// Copied from the upstream repository. Defines named route strings used
+// throughout the app. Keeping route definitions in a single place
+// prevents typos and makes refactoring easier.
 class Routes {
   static const String home = '/';
   static const String processing = '/processing';
@@ -9,4 +12,3 @@ class Routes {
   static const String interactiveEvaluation = '/interactive-evaluation';
   static const String progress = '/progress';
 }
-

@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 import '../widgets/primary_button.dart';
 import '../constants.dart';
 
+/// Presents the processed text to the user and allows them to choose
+/// their preferred study method. The text is scrollable and uses
+/// the current theme’s text styles.
 class AnalysisScreen extends StatelessWidget {
   const AnalysisScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final String processedText = List.filled(
-      10,
-      'Processed text goes here...\n',
-    ).join();
+    final String processedText = List.filled(10, 'Processed text goes here...\n').join();
     return Scaffold(
       appBar: AppBar(title: const Text('Analysis')),
       body: Padding(
@@ -21,9 +21,7 @@ class AnalysisScreen extends StatelessWidget {
               child: SingleChildScrollView(
                 child: Text(
                   processedText,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyLarge?.copyWith(color: Colors.white70),
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.white70),
                   textAlign: TextAlign.justify,
                 ),
               ),
@@ -31,8 +29,7 @@ class AnalysisScreen extends StatelessWidget {
             const SizedBox(height: 16),
             PrimaryButton(
               label: 'Choose Study Mode',
-              onPressed: () =>
-                  Navigator.pushNamed(context, Routes.methodSelection),
+              onPressed: () => Navigator.pushNamed(context, Routes.methodSelection),
             ),
           ],
         ),
