@@ -7,7 +7,7 @@ import 'screens/add_content_screen.dart';
 import 'screens/loading_screen.dart';
 import 'screens/analysis_screen.dart';
 import 'screens/pdf_picker_screen.dart';
-import 'screens/audio_recorder_screen.dart';
+import 'screens/audio_picker_screen.dart';
 import 'screens/video_picker_screen.dart';
 import 'screens/projects_screen.dart';
 import 'screens/method_selection_screen.dart';
@@ -49,7 +49,7 @@ class StudyApp extends StatelessWidget {
         Routes.addContent: (_) => const AddContentScreen(),
         Routes.textInput: (_) => const TextInputScreen(),
         Routes.pdfPicker: (_) => const PdfPickerScreen(),
-        Routes.audioRecorder: (_) => const AudioRecorderScreen(),
+        Routes.audio: (_) => const AudioPickerScreen(),
         Routes.videoPicker: (_) => const VideoPickerScreen(),
         Routes.projects: (_) => const ProjectsScreen(),
         Routes.preview: (context) {
@@ -57,6 +57,10 @@ class StudyApp extends StatelessWidget {
           return PreviewScreen(text: text);
         },
         Routes.loading: (context) {
+          final text = ModalRoute.of(context)?.settings.arguments as String?;
+          return LoadingScreen(text: text);
+        },
+        Routes.processing: (context) {
           final text = ModalRoute.of(context)?.settings.arguments as String?;
           return LoadingScreen(text: text);
         },
