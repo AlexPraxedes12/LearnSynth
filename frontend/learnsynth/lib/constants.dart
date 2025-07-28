@@ -5,7 +5,7 @@ class Routes {
   static const String home = '/';
   static const String textInput = '/text-input';
   static const String preview = '/preview';
-  static const String processing = '/processing';
+  static const String loading = '/loading';
   static const String analysis = '/analysis';
   static const String methodSelection = '/method-selection';
   static const String deepUnderstanding = '/deep-understanding';
@@ -13,4 +13,9 @@ class Routes {
   static const String contextualAssociation = '/contextual-association';
   static const String interactiveEvaluation = '/interactive-evaluation';
   static const String progress = '/progress';
+  static const String addContent = '/add-content';
+  static const String pdfPicker = '/pdf-picker';
+  static const String audioRecorder = '/audio-recorder';
+  static const String videoPicker = '/video-picker';
+  static const String projects = '/projects';
 }

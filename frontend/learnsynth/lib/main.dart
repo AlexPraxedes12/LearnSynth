@@ -3,8 +3,13 @@ import 'package:flutter/material.dart';
 import 'constants.dart';
 import 'theme/app_theme.dart';
 import 'screens/home_screen.dart';
-import 'screens/processing_screen.dart';
+import 'screens/add_content_screen.dart';
+import 'screens/loading_screen.dart';
 import 'screens/analysis_screen.dart';
+import 'screens/pdf_picker_screen.dart';
+import 'screens/audio_recorder_screen.dart';
+import 'screens/video_picker_screen.dart';
+import 'screens/projects_screen.dart';
 import 'screens/method_selection_screen.dart';
 import 'screens/deep_understanding_screen.dart';
 import 'screens/memorization_screen.dart';
@@ -13,9 +18,16 @@ import 'screens/interactive_evaluation_screen.dart';
 import 'screens/progress_screen.dart';
 import 'screens/text_input_screen.dart';
 import 'screens/preview_screen.dart';
+import 'package:provider/provider.dart';
+import 'content_provider.dart';
 
 void main() {
-  runApp(const StudyApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => ContentProvider(),
+      child: const StudyApp(),
+    ),
+  );
 }
 
 class StudyApp extends StatelessWidget {
@@ -34,14 +46,19 @@ class StudyApp extends StatelessWidget {
         // in constants.dart. Also avoid using replacement navigation in
         // the routes table.
         Routes.home: (_) => const MainNavigation(),
+        Routes.addContent: (_) => const AddContentScreen(),
         Routes.textInput: (_) => const TextInputScreen(),
+        Routes.pdfPicker: (_) => const PdfPickerScreen(),
+        Routes.audioRecorder: (_) => const AudioRecorderScreen(),
+        Routes.videoPicker: (_) => const VideoPickerScreen(),
+        Routes.projects: (_) => const ProjectsScreen(),
         Routes.preview: (context) {
           final text = ModalRoute.of(context)?.settings.arguments as String? ?? '';
           return PreviewScreen(text: text);
         },
-        Routes.processing: (context) {
+        Routes.loading: (context) {
           final text = ModalRoute.of(context)?.settings.arguments as String?;
-          return ProcessingScreen(text: text);
+          return LoadingScreen(text: text);
         },
         Routes.analysis: (_) => const AnalysisScreen(),
         Routes.methodSelection: (_) => const MethodSelectionScreen(),
@@ -88,7 +105,7 @@ class _MainNavigationState extends State<MainNavigation> {
         unselectedItemColor: Colors.white54,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.folder), label: 'Projects'),
+          BottomNavigationBarItem(icon: Icon(Icons.folder), label: 'Progress'),
           BottomNavigationBarItem(icon: Icon(Icons.bookmark), label: 'Library'),
         ],
       ),

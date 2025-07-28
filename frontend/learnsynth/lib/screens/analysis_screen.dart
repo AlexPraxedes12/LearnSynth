@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../widgets/primary_button.dart';
 import '../constants.dart';
+import '../content_provider.dart';
 
 /// Presents the processed text to the user and allows them to choose
 /// their preferred study method. The text is scrollable and uses
@@ -10,7 +12,9 @@ class AnalysisScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String processedText = List.filled(10, 'Processed text goes here...\n').join();
+    final provider = context.watch<ContentProvider>();
+    final String processedText =
+        provider.text ?? 'Processed text goes here...';
     return Scaffold(
       appBar: AppBar(title: const Text('Analysis')),
       body: Padding(

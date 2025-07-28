@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
+import 'package:provider/provider.dart';
 import '../widgets/primary_button.dart';
 import '../theme/app_theme.dart';
-
-// Styled text field is wrapped in a Card for better visual hierarchy.
 import '../constants.dart';
+import '../content_provider.dart';
 
 /// Provides a multiline text field for users to paste or type text.
 /// After continuing a short loading screen is shown before
@@ -25,14 +25,12 @@ class _TextInputScreenState extends State<TextInputScreen> {
     super.dispose();
   }
 
-  // After tapping Continue we show the processing screen for a brief
-  // moment before navigating to analysis.
+  // After tapping Continue we store the text and show a loading screen
+  // before navigating to analysis.
   void _continue() {
-    Navigator.pushNamed(
-      context,
-      Routes.processing,
-      arguments: _controller.text,
-    );
+    Provider.of<ContentProvider>(context, listen: false)
+        .setText(_controller.text);
+    Navigator.pushNamed(context, Routes.loading);
   }
 
   @override
