@@ -8,7 +8,8 @@ import 'screens/analysis_screen.dart';
 import 'screens/pdf_picker_screen.dart';
 import 'screens/audio_picker_screen.dart';
 import 'screens/video_picker_screen.dart';
-import 'screens/library_screen.dart';
+import 'screens/projects_screen.dart';
+import 'screens/home_screen.dart';
 import 'screens/method_selection_screen.dart';
 import 'screens/deep_understanding_screen.dart';
 import 'screens/memorization_screen.dart';
@@ -50,7 +51,7 @@ class StudyApp extends StatelessWidget {
         Routes.pdfPicker: (_) => const PdfPickerScreen(),
         Routes.audio: (_) => const AudioPickerScreen(),
         Routes.videoPicker: (_) => const VideoPickerScreen(),
-        Routes.library: (_) => const LibraryScreen(),
+        Routes.library: (_) => const ProjectsScreen(),
         Routes.preview: (context) {
           final text =
               ModalRoute.of(context)?.settings.arguments as String? ?? '';
@@ -88,9 +89,9 @@ class MainNavigation extends StatefulWidget {
 class _MainNavigationState extends State<MainNavigation> {
   int _selectedIndex = 0;
   final List<Widget> _screens = const [
-    AddContentScreen(),
+    HomeScreen(),
     ProgressScreen(),
-    LibraryScreen(),
+    ProjectsScreen(),
   ];
 
   void _onItemTapped(int index) {
@@ -111,7 +112,7 @@ class _MainNavigationState extends State<MainNavigation> {
         unselectedItemColor: Colors.white54,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.folder), label: 'Progress'),
+          BottomNavigationBarItem(icon: Icon(Icons.show_chart), label: 'Progress'),
           BottomNavigationBarItem(icon: Icon(Icons.book), label: 'Library'),
         ],
       ),
