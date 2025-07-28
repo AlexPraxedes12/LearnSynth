@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../widgets/flashcard_widget.dart';
 import '../widgets/primary_button.dart';
+import '../constants.dart';
 
 class MemorizationScreen extends StatelessWidget {
   const MemorizationScreen({super.key});
@@ -25,6 +26,12 @@ class MemorizationScreen extends StatelessWidget {
                 ElevatedButton(onPressed: () {}, child: const Text('Hard')),
                 ElevatedButton(onPressed: () {}, child: const Text('Repeat')),
               ],
+            ),
+            const SizedBox(height: 16),
+            PrimaryButton(
+              label: 'Complete Session',
+              onPressed: () =>
+                  Navigator.pushReplacementNamed(context, Routes.progress),
             )
           ],
         ),
