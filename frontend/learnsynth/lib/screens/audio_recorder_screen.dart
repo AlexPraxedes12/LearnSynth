@@ -5,7 +5,6 @@ import '../widgets/primary_button.dart';
 import '../constants.dart';
 import '../content_provider.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 /// Simple audio recorder using the `record` package.
 class AudioRecorderScreen extends StatefulWidget {
@@ -18,13 +17,6 @@ class AudioRecorderScreen extends StatefulWidget {
 class _AudioRecorderScreenState extends State<AudioRecorderScreen> {
   final _record = AudioRecorder();
   bool _isRecording = false;
-  Future<void> requestMicPermission() async {
-    final status = await Permission.microphone.request();
-    if (!status.isGranted) {
-      // Mostrar alerta o mensaje de error
-      throw Exception("Microphone permission not granted");
-    }
-  }
 
   Future<void> _toggleRecording() async {
     if (_isRecording) {
@@ -35,17 +27,17 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen> {
         Navigator.pushNamed(context, Routes.loading);
       }
     } else {
-      await requestMicPermission();
-
-      final dir = await getTemporaryDirectory();
+      final directory = await getApplicationDocumentsDirectory();
       final filePath =
-          '${dir.path}/recording_${DateTime.now().millisecondsSinceEpoch}.m4a';
+          '${directory.path}/recording_${DateTime.now().millisecondsSinceEpoch}.m4a';
 
       await _record.start(
+        const RecordConfig(
+          encoder: AudioEncoder.aacLc, // o .opus, .wav
+          bitRate: 128000,
+          sampleRate: 44100,
+        ),
         path: filePath,
-        encoder: AudioEncoder.aac,
-        bitRate: 128000,
-        samplingRate: 44100,
       );
     }
 
