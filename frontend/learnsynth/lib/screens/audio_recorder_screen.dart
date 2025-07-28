@@ -37,17 +37,15 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen> {
     } else {
       await requestMicPermission();
 
-      final dir = await getApplicationDocumentsDirectory();
+      final dir = await getTemporaryDirectory();
       final filePath =
           '${dir.path}/recording_${DateTime.now().millisecondsSinceEpoch}.m4a';
 
       await _record.start(
-        const RecordConfig(
-          encoder: AudioEncoder.aacLc,
-          bitRate: 128000,
-          sampleRate: 44100,
-        ),
         path: filePath,
+        encoder: AudioEncoder.aac,
+        bitRate: 128000,
+        samplingRate: 44100,
       );
     }
 
