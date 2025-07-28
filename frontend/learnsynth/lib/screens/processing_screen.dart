@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../widgets/quote_card.dart';
-import '../widgets/primary_button.dart';
 import '../constants.dart';
 
 /// Shows a loading state while content is being processed. Once the
@@ -8,8 +7,28 @@ import '../constants.dart';
 /// screen. We use [Navigator.pushNamed] here rather than
 /// [Navigator.pushReplacementNamed] so that the user can navigate
 /// back if desired.
-class ProcessingScreen extends StatelessWidget {
-  const ProcessingScreen({super.key});
+class ProcessingScreen extends StatefulWidget {
+  final String? text;
+  const ProcessingScreen({super.key, this.text});
+
+  @override
+  State<ProcessingScreen> createState() => _ProcessingScreenState();
+}
+
+class _ProcessingScreenState extends State<ProcessingScreen> {
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) {
+        Navigator.pushNamed(
+          context,
+          Routes.analysis,
+          arguments: widget.text,
+        );
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -18,15 +37,10 @@ class ProcessingScreen extends StatelessWidget {
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const CircularProgressIndicator(),
-            const SizedBox(height: 20),
-            const QuoteCard(quote: 'Learning never exhausts the mind.'),
-            const SizedBox(height: 20),
-            PrimaryButton(
-              label: 'View Analysis',
-              onPressed: () => Navigator.pushNamed(context, Routes.analysis),
-            ),
+          children: const [
+            CircularProgressIndicator(),
+            SizedBox(height: 20),
+            QuoteCard(quote: 'Learning never exhausts the mind.'),
           ],
         ),
       ),

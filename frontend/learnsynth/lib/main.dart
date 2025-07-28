@@ -11,6 +11,8 @@ import 'screens/memorization_screen.dart';
 import 'screens/contextual_association_screen.dart';
 import 'screens/interactive_evaluation_screen.dart';
 import 'screens/progress_screen.dart';
+import 'screens/text_input_screen.dart';
+import 'screens/preview_screen.dart';
 
 void main() {
   runApp(const StudyApp());
@@ -32,7 +34,15 @@ class StudyApp extends StatelessWidget {
         // in constants.dart. Also avoid using replacement navigation in
         // the routes table.
         Routes.home: (_) => const MainNavigation(),
-        Routes.processing: (_) => const ProcessingScreen(),
+        Routes.textInput: (_) => const TextInputScreen(),
+        Routes.preview: (context) {
+          final text = ModalRoute.of(context)?.settings.arguments as String? ?? '';
+          return PreviewScreen(text: text);
+        },
+        Routes.processing: (context) {
+          final text = ModalRoute.of(context)?.settings.arguments as String?;
+          return ProcessingScreen(text: text);
+        },
         Routes.analysis: (_) => const AnalysisScreen(),
         Routes.methodSelection: (_) => const MethodSelectionScreen(),
         Routes.deepUnderstanding: (_) => const DeepUnderstandingScreen(),

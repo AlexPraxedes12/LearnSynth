@@ -3,6 +3,8 @@
 // prevents typos and makes refactoring easier.
 class Routes {
   static const String home = '/';
+  static const String textInput = '/text-input';
+  static const String preview = '/preview';
   static const String processing = '/processing';
   static const String analysis = '/analysis';
   static const String methodSelection = '/method-selection';
