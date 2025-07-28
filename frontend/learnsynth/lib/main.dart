@@ -53,7 +53,8 @@ class StudyApp extends StatelessWidget {
         Routes.videoPicker: (_) => const VideoPickerScreen(),
         Routes.projects: (_) => const ProjectsScreen(),
         Routes.preview: (context) {
-          final text = ModalRoute.of(context)?.settings.arguments as String? ?? '';
+          final text =
+              ModalRoute.of(context)?.settings.arguments as String? ?? '';
           return PreviewScreen(text: text);
         },
         Routes.loading: (context) {
@@ -68,8 +69,10 @@ class StudyApp extends StatelessWidget {
         Routes.methodSelection: (_) => const MethodSelectionScreen(),
         Routes.deepUnderstanding: (_) => const DeepUnderstandingScreen(),
         Routes.memorization: (_) => const MemorizationScreen(),
-        Routes.contextualAssociation: (_) => const ContextualAssociationScreen(),
-        Routes.interactiveEvaluation: (_) => const InteractiveEvaluationScreen(),
+        Routes.contextualAssociation: (_) =>
+            const ContextualAssociationScreen(),
+        Routes.interactiveEvaluation: (_) =>
+            const InteractiveEvaluationScreen(),
         Routes.progress: (_) => const ProgressScreen(),
       },
     );
@@ -86,9 +89,9 @@ class MainNavigation extends StatefulWidget {
 class _MainNavigationState extends State<MainNavigation> {
   int _selectedIndex = 0;
   final List<Widget> _screens = const [
-    HomeScreen(),
+    AddContentScreen(),
     ProgressScreen(),
-    PlaceholderScreen(title: 'Library'),
+    ProjectsScreen(),
   ];
 
   void _onItemTapped(int index) {
