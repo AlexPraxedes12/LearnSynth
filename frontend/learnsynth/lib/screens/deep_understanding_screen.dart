@@ -28,6 +28,12 @@ class DeepUnderstandingScreen extends StatelessWidget {
             PrimaryButton(
               label: 'Play Audio Explanation',
               onPressed: () {},
+            ),
+            const SizedBox(height: 16),
+            PrimaryButton(
+              label: 'Complete Session',
+              onPressed: () =>
+                  Navigator.pushReplacementNamed(context, Routes.progress),
             )
           ],
         ),

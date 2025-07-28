@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../widgets/quiz_question_card.dart';
 import '../widgets/primary_button.dart';
+import '../constants.dart';
 
 class InteractiveEvaluationScreen extends StatelessWidget {
   const InteractiveEvaluationScreen({super.key});
@@ -20,6 +21,12 @@ class InteractiveEvaluationScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             PrimaryButton(label: 'Submit', onPressed: () {}),
+            const SizedBox(height: 16),
+            PrimaryButton(
+              label: 'Complete Session',
+              onPressed: () =>
+                  Navigator.pushReplacementNamed(context, Routes.progress),
+            ),
           ],
         ),
       ),
