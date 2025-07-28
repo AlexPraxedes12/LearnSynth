@@ -20,7 +20,8 @@ class ProcessingScreen extends StatelessWidget {
             const SizedBox(height: 20),
             PrimaryButton(
               label: 'View Analysis',
-              onPressed: () => Navigator.pushNamed(context, Routes.analysis),
+              onPressed: () =>
+                  Navigator.pushReplacementNamed(context, Routes.analysis),
             )
           ],
         ),
