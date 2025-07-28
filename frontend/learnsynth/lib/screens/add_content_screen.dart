@@ -44,8 +44,8 @@ class AddContentScreen extends StatelessWidget {
             const SizedBox(height: 16),
             MethodCard(
               icon: Icons.mic,
-              title: 'Record Audio',
-              description: 'Record using the microphone.',
+              title: 'Upload Audio',
+              description: 'Pick an audio file for transcription.',
               onTap: () => Navigator.pushNamed(context, Routes.audioRecorder),
             ),
             const SizedBox(height: 16),

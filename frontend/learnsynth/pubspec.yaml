@@ -33,7 +33,6 @@ dependencies:
     sdk: flutter
 
   # Allows picking local files for the mocked upload flow.
-  record: ^5.0.0
   file_picker: ^6.2.1
   path_provider: ^2.1.1
   provider: ^6.1.1
