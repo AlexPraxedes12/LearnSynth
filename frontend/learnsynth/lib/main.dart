@@ -2,14 +2,13 @@ import 'package:flutter/material.dart';
 
 import 'constants.dart';
 import 'theme/app_theme.dart';
-import 'screens/home_screen.dart';
 import 'screens/add_content_screen.dart';
 import 'screens/loading_screen.dart';
 import 'screens/analysis_screen.dart';
 import 'screens/pdf_picker_screen.dart';
 import 'screens/audio_picker_screen.dart';
 import 'screens/video_picker_screen.dart';
-import 'screens/projects_screen.dart';
+import 'screens/library_screen.dart';
 import 'screens/method_selection_screen.dart';
 import 'screens/deep_understanding_screen.dart';
 import 'screens/memorization_screen.dart';
@@ -51,7 +50,7 @@ class StudyApp extends StatelessWidget {
         Routes.pdfPicker: (_) => const PdfPickerScreen(),
         Routes.audio: (_) => const AudioPickerScreen(),
         Routes.videoPicker: (_) => const VideoPickerScreen(),
-        Routes.projects: (_) => const ProjectsScreen(),
+        Routes.library: (_) => const LibraryScreen(),
         Routes.preview: (context) {
           final text =
               ModalRoute.of(context)?.settings.arguments as String? ?? '';
@@ -91,7 +90,7 @@ class _MainNavigationState extends State<MainNavigation> {
   final List<Widget> _screens = const [
     AddContentScreen(),
     ProgressScreen(),
-    ProjectsScreen(),
+    LibraryScreen(),
   ];
 
   void _onItemTapped(int index) {
@@ -113,7 +112,7 @@ class _MainNavigationState extends State<MainNavigation> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.folder), label: 'Progress'),
-          BottomNavigationBarItem(icon: Icon(Icons.bookmark), label: 'Library'),
+          BottomNavigationBarItem(icon: Icon(Icons.book), label: 'Library'),
         ],
       ),
     );

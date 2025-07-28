@@ -22,7 +22,7 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(height: 16),
             PrimaryButton(
               label: 'Library',
-              onPressed: () => Navigator.pushNamed(context, Routes.projects),
+              onPressed: () => Navigator.pushNamed(context, Routes.library),
             ),
           ],
         ),

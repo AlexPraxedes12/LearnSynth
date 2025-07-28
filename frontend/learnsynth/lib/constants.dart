@@ -17,6 +17,6 @@ class Routes {
   static const String pdfPicker = '/pdf-picker';
   static const String audio = '/audio';
   static const String videoPicker = '/video-picker';
-  static const String projects = '/projects';
+  static const String library = '/library';
   static const String processing = '/processing';
 }
