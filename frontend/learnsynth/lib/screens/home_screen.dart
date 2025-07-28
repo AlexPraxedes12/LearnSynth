@@ -3,8 +3,9 @@ import '../widgets/primary_button.dart';
 import '../constants.dart';
 
 /// Allows the user to add new content via multiple methods: pasting text,
-/// uploading a PDF, recording audio or uploading a video. Each action
-/// navigates to the processing screen using a named route.
+/// uploading a PDF, recording audio or uploading a video. Pasting text
+/// first opens a text input screen, while the other actions navigate
+/// directly to the processing screen using named routes.
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -21,7 +22,8 @@ class HomeScreen extends StatelessWidget {
               children: [
                 PrimaryButton(
                   label: 'Paste Text',
-                  onPressed: () => Navigator.pushNamed(context, Routes.processing),
+                  onPressed: () =>
+                      Navigator.pushNamed(context, Routes.textInput),
                 ),
                 const SizedBox(height: 16),
                 PrimaryButton(
