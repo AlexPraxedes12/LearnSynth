@@ -9,9 +9,7 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Add Content'),
-      ),
+      appBar: AppBar(title: const Text('Add Content')),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Center(
@@ -21,37 +19,31 @@ class HomeScreen extends StatelessWidget {
               children: [
                 PrimaryButton(
                   label: 'Paste Text',
-                  onPressed: () => Navigator.pushNamed(context, Routes.processing),
+                  onPressed: () =>
+                      Navigator.pushNamed(context, Routes.processing),
                 ),
                 const SizedBox(height: 16),
                 PrimaryButton(
                   label: 'Upload PDF',
-                  onPressed: () => Navigator.pushNamed(context, Routes.processing),
+                  onPressed: () =>
+                      Navigator.pushNamed(context, Routes.processing),
                 ),
                 const SizedBox(height: 16),
                 PrimaryButton(
                   label: 'Record Audio',
-                  onPressed: () => Navigator.pushNamed(context, Routes.processing),
+                  onPressed: () =>
+                      Navigator.pushNamed(context, Routes.processing),
                 ),
                 const SizedBox(height: 16),
                 PrimaryButton(
                   label: 'Upload Video',
-                  onPressed: () => Navigator.pushNamed(context, Routes.processing),
+                  onPressed: () =>
+                      Navigator.pushNamed(context, Routes.processing),
                 ),
               ],
             ),
           ),
         ),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: AppTheme.background,
-        selectedItemColor: Colors.white,
-        unselectedItemColor: Colors.white54,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.folder), label: 'Projects'),
-          BottomNavigationBarItem(icon: Icon(Icons.bookmark), label: 'Library'),
-        ],
       ),
     );
   }

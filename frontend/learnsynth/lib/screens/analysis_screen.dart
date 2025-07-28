@@ -7,17 +7,24 @@ class AnalysisScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final String processedText = List.filled(
+      10,
+      'Processed text goes here...\n',
+    ).join();
     return Scaffold(
       appBar: AppBar(title: const Text('Analysis')),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(
           children: [
-            const Expanded(
+            Expanded(
               child: SingleChildScrollView(
                 child: Text(
-                  'Processed text goes here...\n' * 10,
-                  style: TextStyle(color: Colors.white70),
+                  processedText,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyLarge?.copyWith(color: Colors.white70),
+                  textAlign: TextAlign.justify,
                 ),
               ),
             ),
@@ -26,7 +33,7 @@ class AnalysisScreen extends StatelessWidget {
               label: 'Choose Study Mode',
               onPressed: () =>
                   Navigator.pushNamed(context, Routes.methodSelection),
-            )
+            ),
           ],
         ),
       ),
