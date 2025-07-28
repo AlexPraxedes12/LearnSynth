@@ -58,14 +58,6 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
-  plugin:
-    platforms:
-      windows:
-        default_package: file_picker
-      linux:
-        default_package: file_picker
-      macos:
-        default_package: file_picker
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
