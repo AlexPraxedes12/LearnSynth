@@ -19,7 +19,8 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(seconds: 3), () {
+    // Shortened delay to keep the demo snappy.
+    Future.delayed(const Duration(seconds: 2), () {
       if (mounted) {
         Navigator.pushNamed(
           context,

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import '../widgets/progress_summary_card.dart';
-import '../widgets/primary_button.dart';
+import '../widgets/quote_card.dart';
 import '../constants.dart';
 
-/// Displays summary statistics for the user’s progress. The "Back to
-/// Home" button now uses [Navigator.pushNamedAndRemoveUntil] to clear
-/// the navigation stack and return to the home screen cleanly.
+/// Displays summary statistics for the user’s progress. Navigation back
+/// to the home page is provided by the bottom navigation bar, so we
+/// simply show a motivational quote instead of a button.
 class ProgressScreen extends StatelessWidget {
   const ProgressScreen({super.key});
 
@@ -23,14 +23,9 @@ class ProgressScreen extends StatelessWidget {
             const SizedBox(height: 16),
             const ProgressSummaryCard(title: 'Methods Used', value: '3'),
             const SizedBox(height: 16),
-            PrimaryButton(
-              label: 'Back to Home',
-              onPressed: () => Navigator.pushNamedAndRemoveUntil(
-                context,
-                Routes.home,
-                (route) => false,
-              ),
-            ),
+            // Navigation back to home is handled by the bottom nav bar.
+            // We show a motivational quote instead of a button.
+            const QuoteCard(quote: 'Keep up the great work!'),
           ],
         ),
       ),

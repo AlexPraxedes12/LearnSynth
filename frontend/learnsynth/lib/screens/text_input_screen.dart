@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 
 import '../widgets/primary_button.dart';
+import '../theme/app_theme.dart';
+
+// Styled text field is wrapped in a Card for better visual hierarchy.
 import '../constants.dart';
 
 /// Provides a multiline text field for users to paste or type text.
-/// Upon continuing the text is passed to the preview screen.
+/// After continuing a short loading screen is shown before
+/// navigating to the analysis stage.
 class TextInputScreen extends StatefulWidget {
   const TextInputScreen({super.key});
 
@@ -21,10 +25,12 @@ class _TextInputScreenState extends State<TextInputScreen> {
     super.dispose();
   }
 
+  // After tapping Continue we show the processing screen for a brief
+  // moment before navigating to analysis.
   void _continue() {
     Navigator.pushNamed(
       context,
-      Routes.preview,
+      Routes.processing,
       arguments: _controller.text,
     );
   }
@@ -39,12 +45,22 @@ class _TextInputScreenState extends State<TextInputScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Expanded(
-              child: TextField(
-                controller: _controller,
-                maxLines: null,
-                decoration: const InputDecoration(
-                  hintText: 'Enter or paste text here',
-                  border: OutlineInputBorder(),
+              child: Card(
+                color: AppTheme.accentGray,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: TextField(
+                    controller: _controller,
+                    maxLines: null,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
+                      hintText: 'Enter or paste text here',
+                      border: InputBorder.none,
+                    ),
+                  ),
                 ),
               ),
             ),
