@@ -1,5 +1,15 @@
 import 'package:flutter/material.dart';
-import 'screens/home.dart';
+import 'constants.dart';
+import 'theme/app_theme.dart';
+import 'screens/home_screen.dart';
+import 'screens/processing_screen.dart';
+import 'screens/analysis_screen.dart';
+import 'screens/method_selection_screen.dart';
+import 'screens/deep_understanding_screen.dart';
+import 'screens/memorization_screen.dart';
+import 'screens/contextual_association_screen.dart';
+import 'screens/interactive_evaluation_screen.dart';
+import 'screens/progress_screen.dart';
 
 void main() {
   runApp(const StudyApp());
@@ -13,22 +23,19 @@ class StudyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Interactive Learning App',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: const Color(0xFF121212),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF121212),
-          elevation: 0,
-          iconTheme: IconThemeData(color: Colors.white),
-          titleTextStyle: TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        textTheme: const TextTheme(bodyMedium: TextStyle(color: Colors.white)),
-        useMaterial3: true,
-      ),
-      home: const MainNavigation(),
+      theme: AppTheme.darkTheme,
+      initialRoute: Routes.home,
+      routes: {
+        Routes.home: (_) => const MainNavigation(),
+        Routes.processing: (_) => const ProcessingScreen(),
+        Routes.analysis: (_) => const AnalysisScreen(),
+        Routes.methodSelection: (_) => const MethodSelectionScreen(),
+        Routes.deepUnderstanding: (_) => const DeepUnderstandingScreen(),
+        Routes.memorization: (_) => const MemorizationScreen(),
+        Routes.contextualAssociation: (_) => const ContextualAssociationScreen(),
+        Routes.interactiveEvaluation: (_) => const InteractiveEvaluationScreen(),
+        Routes.progress: (_) => const ProgressScreen(),
+      },
     );
   }
 }
@@ -42,10 +49,10 @@ class MainNavigation extends StatefulWidget {
 
 class _MainNavigationState extends State<MainNavigation> {
   int _selectedIndex = 0;
-  final List<Widget> _screens = [
-    const PlaceholderScreen(title: 'Home'),
-    const Home(),
-    const PlaceholderScreen(title: 'Library'),
+  final List<Widget> _screens = const [
+    HomeScreen(),
+    ProgressScreen(),
+    PlaceholderScreen(title: 'Library'),
   ];
 
   void _onItemTapped(int index) {
@@ -61,7 +68,7 @@ class _MainNavigationState extends State<MainNavigation> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
-        backgroundColor: const Color(0xFF121212),
+        backgroundColor: AppTheme.background,
         selectedItemColor: Colors.white,
         unselectedItemColor: Colors.white54,
         items: const [
