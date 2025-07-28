@@ -39,7 +39,7 @@ class StudyApp extends StatelessWidget {
       title: 'Interactive Learning App',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
-      initialRoute: Routes.home,
+      initialRoute: Routes.addContent,
       routes: {
         // Map each named route to its corresponding screen. Note that
         // it’s important to keep this list in sync with the definitions
