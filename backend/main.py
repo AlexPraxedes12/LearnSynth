@@ -4,7 +4,7 @@ from fastapi import (
     File,
     Body,
     HTTPException,
-    BackgroundTask,
+    BackgroundTasks,
 )
 from fastapi.responses import FileResponse
 import os
