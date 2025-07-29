@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
@@ -7,6 +6,7 @@ import '../widgets/primary_button.dart';
 import '../constants.dart';
 import '../content_provider.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 
 /// Allows the user to pick a PDF file and reads its text.
 class PdfPickerScreen extends StatefulWidget {
@@ -39,7 +39,14 @@ class _PdfPickerScreenState extends State<PdfPickerScreen> {
     try {
       final url = Uri.parse('http://10.0.2.2:8000/upload-content');
       final request = http.MultipartRequest('POST', url);
-      request.files.add(await http.MultipartFile.fromPath('file', path));
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'file',
+          path,
+          contentType: MediaType('application', 'pdf'),
+        ),
+      );
+      debugPrint('Uploading PDF to $url');
 
       final streamed = await request.send();
       final response = await http.Response.fromStream(streamed);
@@ -47,17 +54,20 @@ class _PdfPickerScreenState extends State<PdfPickerScreen> {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         final text =
-            (data['text'] ?? data['summary'] ?? '') as String;
+            (data['text'] ?? data['course'] ?? data['summary'] ?? '') as String;
         Provider.of<ContentProvider>(context, listen: false).setText(text);
         if (mounted) {
           Navigator.pushNamed(context, Routes.loading);
         }
       } else {
+        debugPrint('Upload failed: ${response.statusCode}');
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Failed to upload file')),
         );
       }
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('Upload error: $e');
+      debugPrintStack(stackTrace: st);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Network error')),
