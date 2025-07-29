@@ -37,14 +37,13 @@ class StudyApp extends StatelessWidget {
       title: 'Interactive Learning App',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
-      initialRoute: Routes.addContent,
+      initialRoute: Routes.home,
       routes: {
         // Map each named route to its corresponding screen. Note that
         // it’s important to keep this list in sync with the definitions
         // in constants.dart. Also avoid using replacement navigation in
         // the routes table.
         Routes.home: (_) => const MainNavigation(),
-        Routes.addContent: (_) => const AddContentScreen(),
         Routes.textInput: (_) => const TextInputScreen(),
         Routes.pdfPicker: (_) => const PdfPickerScreen(),
         Routes.audio: (_) => const AudioPickerScreen(),
