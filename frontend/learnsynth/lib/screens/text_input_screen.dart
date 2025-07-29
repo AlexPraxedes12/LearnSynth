@@ -27,14 +27,14 @@ class _TextInputScreenState extends State<TextInputScreen> {
     super.dispose();
   }
 
-  // After tapping Continue we store the text and show a loading screen
-  // before navigating to analysis.
+  // After tapping Continue we send the text to the backend for analysis
+  // and navigate directly to the analysis screen.
   Future<void> _onContinuePressed() async {
     final provider = Provider.of<ContentProvider>(context, listen: false);
     final text = _controller.text;
 
     try {
-      final url = Uri.parse("http://10.0.2.2:8000/upload-content");
+      final url = Uri.parse("http://10.0.2.2:8000/analyze");
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
@@ -43,14 +43,15 @@ class _TextInputScreenState extends State<TextInputScreen> {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final cleanedText = data['cleaned_text'] as String? ?? '';
-        provider.setText(cleanedText);
+        final summary = data['summary'] as String? ?? '';
+        final topics = (data['topics'] as List?)?.cast<String>() ?? <String>[];
+        provider.setAnalysis(summary, topics);
         if (mounted) {
-          Navigator.pushNamed(context, Routes.loading);
+          Navigator.pushNamed(context, Routes.analysis);
         }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to upload content')),
+          const SnackBar(content: Text('Failed to analyze text')),
         );
       }
     } catch (_) {
