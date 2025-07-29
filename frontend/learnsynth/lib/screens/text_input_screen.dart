@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 import 'package:provider/provider.dart';
 import '../widgets/primary_button.dart';
@@ -27,11 +29,36 @@ class _TextInputScreenState extends State<TextInputScreen> {
 
   // After tapping Continue we store the text and show a loading screen
   // before navigating to analysis.
-  void _continue() {
+  Future<void> _onContinuePressed() async {
     final provider = Provider.of<ContentProvider>(context, listen: false);
-    // TODO: POST /upload-content with the entered text
-    provider.setText(_controller.text);
-    Navigator.pushNamed(context, Routes.loading);
+    final text = _controller.text;
+
+    try {
+      final response = await http.post(
+        Uri.parse('http://localhost:8000/upload-content'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'text': text}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final cleanedText = data['cleaned_text'] as String? ?? '';
+        provider.setText(cleanedText);
+        if (mounted) {
+          Navigator.pushNamed(context, Routes.loading);
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to upload content')),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Network error')),
+        );
+      }
+    }
   }
 
   @override
@@ -64,7 +91,7 @@ class _TextInputScreenState extends State<TextInputScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            PrimaryButton(label: 'Continue', onPressed: _continue),
+            PrimaryButton(label: 'Continue', onPressed: _onContinuePressed),
           ],
         ),
       ),
