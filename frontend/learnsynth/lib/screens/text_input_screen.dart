@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import '../services/content_service.dart';
 
 import 'package:provider/provider.dart';
 import '../widgets/primary_button.dart';
@@ -27,38 +26,22 @@ class _TextInputScreenState extends State<TextInputScreen> {
     super.dispose();
   }
 
-  // After tapping Continue we send the text to the backend for analysis
-  // and navigate directly to the analysis screen.
+  // Send the text to the backend and proceed to the loading screen.
   Future<void> _onContinuePressed() async {
     final provider = Provider.of<ContentProvider>(context, listen: false);
     final text = _controller.text;
 
     try {
-      final url = Uri.parse("http://10.0.2.2:8000/analyze");
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'text': text}),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final summary = data['summary'] as String? ?? '';
-        final topics = (data['topics'] as List?)?.cast<String>() ?? <String>[];
-        provider.setAnalysis(summary, topics);
-        if (mounted) {
-          Navigator.pushNamed(context, Routes.analysis);
-        }
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to analyze text')),
-        );
+      final cleaned = await ContentService.uploadContent(text);
+      provider.setText(cleaned);
+      if (mounted) {
+        Navigator.pushNamed(context, Routes.loading);
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Network error')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to upload text')),
+        );
       }
     }
   }
