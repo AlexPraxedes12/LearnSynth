@@ -13,8 +13,10 @@ class AnalysisScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<ContentProvider>();
-    final String processedText =
-        provider.text ?? 'Processed text goes here...';
+    final summary = provider.summary ?? 'Summary will appear here.';
+    final topics = provider.topics.isNotEmpty
+        ? provider.topics.join(', ')
+        : 'Topics will appear here.';
     return Scaffold(
       appBar: AppBar(title: const Text('Analysis')),
       body: Padding(
@@ -23,10 +25,17 @@ class AnalysisScreen extends StatelessWidget {
           children: [
             Expanded(
               child: SingleChildScrollView(
-                child: Text(
-                  processedText,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.white70),
-                  textAlign: TextAlign.justify,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      summary,
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.white70),
+                      textAlign: TextAlign.justify,
+                    ),
+                    const SizedBox(height: 12),
+                    Text('Topics: $topics'),
+                  ],
                 ),
               ),
             ),

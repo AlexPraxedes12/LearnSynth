@@ -34,8 +34,12 @@ class _AudioPickerScreenState extends State<AudioPickerScreen> {
 
   void _continue() {
     if (_path == null) return;
-    Provider.of<ContentProvider>(context, listen: false).setAudioPath(_path!);
-    Navigator.pushNamed(context, Routes.processing);
+    final provider = Provider.of<ContentProvider>(context, listen: false);
+    provider.setAudioPath(_path!);
+    // TODO: POST /upload-content with the audio file
+    provider.text = 'Cleaned text from $_name';
+    provider.notifyListeners();
+    Navigator.pushNamed(context, Routes.loading);
   }
 
   @override

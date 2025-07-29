@@ -13,6 +13,8 @@ class ContentItem {
 class ContentProvider extends ChangeNotifier {
   String? text;
   String? filePath;
+  String? summary;
+  List<String> topics = [];
   final List<ContentItem> _saved = [];
 
   /// List of all content pieces added by the user.
@@ -43,6 +45,12 @@ class ContentProvider extends ChangeNotifier {
     filePath = path;
     text = null;
     _saved.add(ContentItem(filePath: path));
+    notifyListeners();
+  }
+
+  void setAnalysis(String summaryText, List<String> topicsList) {
+    summary = summaryText;
+    topics = topicsList;
     notifyListeners();
   }
 

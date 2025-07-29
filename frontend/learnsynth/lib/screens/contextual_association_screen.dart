@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../widgets/primary_button.dart';
 import '../constants.dart';
+import 'package:provider/provider.dart';
+import '../content_provider.dart';
 
 /// Encourages users to relate concepts to real‑world scenarios. Once
 /// complete, navigation continues to the progress screen using
@@ -10,6 +12,8 @@ class ContextualAssociationScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final provider = Provider.of<ContentProvider>(context, listen: false);
+    // TODO: POST /study-mode with mode=contextual_association
     return Scaffold(
       appBar: AppBar(title: const Text('Contextual Association')),
       body: Padding(

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../widgets/primary_button.dart';
 import '../constants.dart';
+import 'package:provider/provider.dart';
+import '../content_provider.dart';
 
 /// Provides a deep understanding session. Users can listen to an
 /// audio explanation and view a concept map. Upon completion, they
@@ -11,6 +13,8 @@ class DeepUnderstandingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final provider = Provider.of<ContentProvider>(context, listen: false);
+    // TODO: POST /study-mode with mode=deep_understanding
     return Scaffold(
       appBar: AppBar(title: const Text('Deep Understanding')),
       body: Padding(

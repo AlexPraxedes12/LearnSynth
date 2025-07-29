@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../widgets/quiz_question_card.dart';
 import '../widgets/primary_button.dart';
 import '../constants.dart';
+import 'package:provider/provider.dart';
+import '../content_provider.dart';
 
 /// Presents an interactive quiz. After submitting answers, the user can
 /// complete the session which navigates to the progress screen using
@@ -11,6 +13,8 @@ class InteractiveEvaluationScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final provider = Provider.of<ContentProvider>(context, listen: false);
+    // TODO: POST /study-mode with mode=interactive_evaluation
     return Scaffold(
       appBar: AppBar(title: const Text('Interactive Evaluation')),
       body: Padding(

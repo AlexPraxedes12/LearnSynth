@@ -9,7 +9,6 @@ import 'screens/pdf_picker_screen.dart';
 import 'screens/audio_picker_screen.dart';
 import 'screens/video_picker_screen.dart';
 import 'screens/projects_screen.dart';
-import 'screens/home_screen.dart';
 import 'screens/method_selection_screen.dart';
 import 'screens/deep_understanding_screen.dart';
 import 'screens/memorization_screen.dart';
@@ -17,7 +16,6 @@ import 'screens/contextual_association_screen.dart';
 import 'screens/interactive_evaluation_screen.dart';
 import 'screens/progress_screen.dart';
 import 'screens/text_input_screen.dart';
-import 'screens/preview_screen.dart';
 import 'package:provider/provider.dart';
 import 'content_provider.dart';
 
@@ -52,16 +50,7 @@ class StudyApp extends StatelessWidget {
         Routes.audio: (_) => const AudioPickerScreen(),
         Routes.videoPicker: (_) => const VideoPickerScreen(),
         Routes.library: (_) => const ProjectsScreen(),
-        Routes.preview: (context) {
-          final text =
-              ModalRoute.of(context)?.settings.arguments as String? ?? '';
-          return PreviewScreen(text: text);
-        },
         Routes.loading: (context) {
-          final text = ModalRoute.of(context)?.settings.arguments as String?;
-          return LoadingScreen(text: text);
-        },
-        Routes.processing: (context) {
           final text = ModalRoute.of(context)?.settings.arguments as String?;
           return LoadingScreen(text: text);
         },
@@ -89,7 +78,7 @@ class MainNavigation extends StatefulWidget {
 class _MainNavigationState extends State<MainNavigation> {
   int _selectedIndex = 0;
   final List<Widget> _screens = const [
-    HomeScreen(),
+    AddContentScreen(),
     ProgressScreen(),
     ProjectsScreen(),
   ];
@@ -111,7 +100,7 @@ class _MainNavigationState extends State<MainNavigation> {
         selectedItemColor: Colors.white,
         unselectedItemColor: Colors.white54,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.add), label: 'Add'),
           BottomNavigationBarItem(icon: Icon(Icons.show_chart), label: 'Progress'),
           BottomNavigationBarItem(icon: Icon(Icons.book), label: 'Library'),
         ],
