@@ -34,8 +34,9 @@ class _TextInputScreenState extends State<TextInputScreen> {
     final text = _controller.text;
 
     try {
+      final url = Uri.parse("http://10.0.2.2:8000/upload-content");
       final response = await http.post(
-        Uri.parse('http://localhost:8000/upload-content'),
+        url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'text': text}),
       );
@@ -54,9 +55,9 @@ class _TextInputScreenState extends State<TextInputScreen> {
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Network error')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Network error')));
       }
     }
   }
@@ -98,4 +99,3 @@ class _TextInputScreenState extends State<TextInputScreen> {
     );
   }
 }
-
