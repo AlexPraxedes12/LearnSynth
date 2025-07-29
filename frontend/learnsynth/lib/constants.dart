@@ -4,7 +4,6 @@
 class Routes {
   static const String home = '/';
   static const String textInput = '/text-input';
-  static const String preview = '/preview';
   static const String loading = '/loading';
   static const String analysis = '/analysis';
   static const String methodSelection = '/method-selection';
@@ -18,5 +17,4 @@ class Routes {
   static const String audio = '/audio';
   static const String videoPicker = '/video-picker';
   static const String library = '/library';
-  static const String processing = '/processing';
 }

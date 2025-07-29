@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../widgets/progress_summary_card.dart';
 import '../widgets/quote_card.dart';
 import '../constants.dart';
+import 'package:provider/provider.dart';
+import '../content_provider.dart';
 
 /// Displays summary statistics for the user’s progress. Navigation back
 /// to the home page is provided by the bottom navigation bar, so we
@@ -11,6 +13,8 @@ class ProgressScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final provider = Provider.of<ContentProvider>(context, listen: false);
+    // TODO: POST /review/{id} to fetch progress
     return Scaffold(
       appBar: AppBar(title: const Text('Progress')),
       body: Padding(

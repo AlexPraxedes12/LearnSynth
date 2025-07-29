@@ -37,6 +37,9 @@ class AddContentScreen extends StatelessWidget {
                 );
                 if (result != null && result.files.single.path != null && context.mounted) {
                   content.setPdfPath(result.files.single.path!);
+                  // TODO: POST /upload-content with the PDF file
+                  content.text = 'Cleaned text from ${result.files.single.name}';
+                  content.notifyListeners();
                   Navigator.pushNamed(context, Routes.loading);
                 }
               },
@@ -57,6 +60,9 @@ class AddContentScreen extends StatelessWidget {
                 final result = await FilePicker.platform.pickFiles(type: FileType.video);
                 if (result != null && result.files.single.path != null && context.mounted) {
                   content.setVideoPath(result.files.single.path!);
+                  // TODO: POST /upload-content with the video file
+                  content.text = 'Cleaned text from ${result.files.single.name}';
+                  content.notifyListeners();
                   Navigator.pushNamed(context, Routes.loading);
                 }
               },

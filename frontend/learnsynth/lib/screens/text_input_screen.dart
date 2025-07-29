@@ -28,8 +28,9 @@ class _TextInputScreenState extends State<TextInputScreen> {
   // After tapping Continue we store the text and show a loading screen
   // before navigating to analysis.
   void _continue() {
-    Provider.of<ContentProvider>(context, listen: false)
-        .setText(_controller.text);
+    final provider = Provider.of<ContentProvider>(context, listen: false);
+    // TODO: POST /upload-content with the entered text
+    provider.setText(_controller.text);
     Navigator.pushNamed(context, Routes.loading);
   }
 

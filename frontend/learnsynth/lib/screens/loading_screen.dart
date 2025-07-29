@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../widgets/quote_card.dart';
 import '../constants.dart';
+import 'package:provider/provider.dart';
+import '../content_provider.dart';
 
 /// Shows a loading state while content is being processed. Once the
 /// processing is complete, the user can proceed to the analysis
@@ -8,8 +10,7 @@ import '../constants.dart';
 /// [Navigator.pushReplacementNamed] so that the user can navigate
 /// back if desired.
 class LoadingScreen extends StatefulWidget {
-  final String? text;
-  const LoadingScreen({super.key, this.text});
+  const LoadingScreen({super.key});
 
   @override
   State<LoadingScreen> createState() => _LoadingScreenState();
@@ -19,13 +20,15 @@ class _LoadingScreenState extends State<LoadingScreen> {
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(seconds: 3), () {
+    final provider = Provider.of<ContentProvider>(context, listen: false);
+    Future.delayed(const Duration(seconds: 2), () {
       if (mounted) {
-        Navigator.pushNamed(
-          context,
-          Routes.analysis,
-          arguments: widget.text,
+        // TODO: POST /analyze with provider.text
+        provider.setAnalysis(
+          'Mock summary for content',
+          ['Topic 1', 'Topic 2'],
         );
+        Navigator.pushNamed(context, Routes.analysis);
       }
     });
   }
