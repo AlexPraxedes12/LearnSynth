@@ -30,19 +30,7 @@ class AddContentScreen extends StatelessWidget {
               icon: Icons.picture_as_pdf,
               title: 'Upload PDF',
               description: 'Pick a PDF document to analyse.',
-              onTap: () async {
-                final result = await FilePicker.platform.pickFiles(
-                  type: FileType.custom,
-                  allowedExtensions: ['pdf'],
-                );
-                if (result != null && result.files.single.path != null && context.mounted) {
-                  content.setPdfPath(result.files.single.path!);
-                  // TODO: POST /upload-content with the PDF file
-                  content.text = 'Cleaned text from ${result.files.single.name}';
-                  content.notifyListeners();
-                  Navigator.pushNamed(context, Routes.loading);
-                }
-              },
+              onTap: () => Navigator.pushNamed(context, Routes.pdfPicker),
             ),
             const SizedBox(height: 16),
             MethodCard(
@@ -56,16 +44,7 @@ class AddContentScreen extends StatelessWidget {
               icon: Icons.video_file,
               title: 'Upload Video',
               description: 'Select a video for transcription.',
-              onTap: () async {
-                final result = await FilePicker.platform.pickFiles(type: FileType.video);
-                if (result != null && result.files.single.path != null && context.mounted) {
-                  content.setVideoPath(result.files.single.path!);
-                  // TODO: POST /upload-content with the video file
-                  content.text = 'Cleaned text from ${result.files.single.name}';
-                  content.notifyListeners();
-                  Navigator.pushNamed(context, Routes.loading);
-                }
-              },
+              onTap: () => Navigator.pushNamed(context, Routes.videoPicker),
             ),
           ],
         ),
