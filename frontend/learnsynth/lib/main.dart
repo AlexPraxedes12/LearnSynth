@@ -52,7 +52,7 @@ class StudyApp extends StatelessWidget {
         Routes.library: (_) => const ProjectsScreen(),
         Routes.loading: (context) {
           final text = ModalRoute.of(context)?.settings.arguments as String?;
-          return LoadingScreen(text: text);
+          return LoadingScreen();
         },
         Routes.analysis: (_) => const AnalysisScreen(),
         Routes.methodSelection: (_) => const MethodSelectionScreen(),
@@ -101,7 +101,10 @@ class _MainNavigationState extends State<MainNavigation> {
         unselectedItemColor: Colors.white54,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.add), label: 'Add'),
-          BottomNavigationBarItem(icon: Icon(Icons.show_chart), label: 'Progress'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.show_chart),
+            label: 'Progress',
+          ),
           BottomNavigationBarItem(icon: Icon(Icons.book), label: 'Library'),
         ],
       ),
