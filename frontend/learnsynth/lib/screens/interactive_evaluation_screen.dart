@@ -68,12 +68,28 @@ class _InteractiveEvaluationScreenState
             : Column(
                 children: [
                   if (exercises.isNotEmpty)
-                    QuizQuestionCard(
-                      question: exercises.first['question'] ?? '',
-                      choices:
-                          List<String>.from(exercises.first['choices'] ?? []),
-                      correctIndex:
-                          exercises.first['correctIndex'] as int? ?? 0,
+                    Expanded(
+                      child: ListView.separated(
+                        itemCount: exercises.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 16),
+                        itemBuilder: (context, index) {
+                          final ex = exercises[index];
+                          if (ex.containsKey('choices')) {
+                            return QuizQuestionCard(
+                              question: ex['question'] ?? '',
+                              choices:
+                                  List<String>.from(ex['choices'] ?? const []),
+                              correctIndex: ex['correctIndex'] as int? ?? 0,
+                            );
+                          }
+                          return Card(
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Text(ex['question']?.toString() ?? ex.toString()),
+                            ),
+                          );
+                        },
+                      ),
                     )
                   else
                     const Text('No questions generated'),
