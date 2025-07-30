@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter_video_compress/flutter_video_compress.dart';
 import 'package:provider/provider.dart';
 
 import '../widgets/primary_button.dart';
@@ -22,6 +23,8 @@ class _VideoPickerScreenState extends State<VideoPickerScreen> {
   String? _path;
   String? _name;
   Uint8List? _bytes;
+  final _videoCompressor = FlutterVideoCompress();
+  static const int _maxSize = 5 * 1024 * 1024;
 
   Future<void> _pickVideo() async {
     final result = await FilePicker.platform.pickFiles(
@@ -42,6 +45,40 @@ class _VideoPickerScreenState extends State<VideoPickerScreen> {
     if (_bytes == null || _path == null) return;
     final provider = Provider.of<ContentProvider>(context, listen: false);
     provider.setVideoPath(_path!);
+
+    if (_bytes!.length > _maxSize) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Compressing video...')),
+        );
+      }
+      try {
+        final info = await _videoCompressor.compressVideo(
+          _path!,
+          quality: VideoQuality.MediumQuality,
+        );
+        if (info != null && info.file != null) {
+          final compressed = await info.file!.readAsBytes();
+          _bytes = compressed;
+        }
+      } catch (e) {
+        debugPrint('Compression error: $e');
+      }
+      if (_bytes != null && _bytes!.length > _maxSize) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('File still too large after compression'),
+            ),
+          );
+        }
+        return;
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Video compressed')),
+        );
+      }
+    }
 
     // TODO: show loading indicator while uploading
 
