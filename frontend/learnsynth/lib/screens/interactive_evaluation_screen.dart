@@ -30,22 +30,26 @@ class _InteractiveEvaluationScreenState
 
   Future<void> _fetch() async {
     final provider = Provider.of<ContentProvider>(context, listen: false);
+    if (provider.evaluationQuestions.isNotEmpty) {
+      setState(() => _loading = false);
+      return;
+    }
     try {
       final url = Uri.parse('http://10.0.2.2:8000/study-mode');
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'text': provider.text, 'mode': 'exercises'}),
+        body: jsonEncode({'text': provider.text, 'mode': 'interactive_evaluation'}),
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final ex = (data['exercises'] as List? ?? [])
+        final ex = (data['evaluationQuestions'] as List? ?? data['exercises'] as List? ?? [])
             .map<Map<String, dynamic>>( (e) => Map<String, dynamic>.from(e as Map))
             .toList();
-        provider.setExercises(ex);
+        provider.setEvaluationQuestions(ex);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to load exercises')),
+          const SnackBar(content: Text('Failed to load questions')),
         );
       }
     } catch (_) {
@@ -58,7 +62,7 @@ class _InteractiveEvaluationScreenState
 
   @override
   Widget build(BuildContext context) {
-    final exercises = context.watch<ContentProvider>().exercises;
+    final exercises = context.watch<ContentProvider>().evaluationQuestions;
     return Scaffold(
       appBar: AppBar(title: const Text('Interactive Evaluation')),
       body: Padding(
