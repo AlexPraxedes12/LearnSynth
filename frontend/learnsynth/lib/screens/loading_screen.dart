@@ -22,37 +22,40 @@ class _LoadingScreenState extends State<LoadingScreen> {
   @override
   void initState() {
     super.initState();
+    _analyze();
+  }
+
+  Future<void> _analyze() async {
     final provider = Provider.of<ContentProvider>(context, listen: false);
-    () async {
-      try {
-        final url = Uri.parse('http://10.0.2.2:8000/analyze');
-        final response = await http.post(
-          url,
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({'text': provider.text}),
-        );
-        if (response.statusCode == 200) {
-          final data = jsonDecode(response.body) as Map<String, dynamic>;
-          provider.setAnalysis(
-            data['summary'] as String? ?? '',
-            List<String>.from(data['topics'] as List? ?? []),
-          );
-        } else {
+    try {
+      final url = Uri.parse('http://10.0.2.2:8000/analyze');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'text': provider.text}),
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final summary = data['summary'] as String? ?? '';
+        final topics = List<String>.from(data['topics'] as List? ?? []);
+        provider.setAnalysis(summary, topics);
+        if (mounted) {
+          Navigator.pushNamed(context, Routes.analysis);
+        }
+      } else {
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Analysis failed')),
           );
         }
-      } catch (_) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Network error')),
-          );
-        }
       }
+    } catch (_) {
       if (mounted) {
-        Navigator.pushNamed(context, Routes.analysis);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Network error')),
+        );
       }
-    }();
+    }
   }
 
   @override
