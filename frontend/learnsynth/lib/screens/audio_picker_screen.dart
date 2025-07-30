@@ -63,7 +63,7 @@ class _AudioPickerScreenState extends State<AudioPickerScreen> {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         final text = data['text'] as String? ?? '';
-        provider.setText(text);
+        provider.setFileContent(path: _path!, text: text);
       } else {
         debugPrint('Upload failed: ${response.statusCode}');
       }

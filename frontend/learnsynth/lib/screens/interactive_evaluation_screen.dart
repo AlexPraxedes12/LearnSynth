@@ -4,37 +4,89 @@ import '../widgets/primary_button.dart';
 import '../constants.dart';
 import 'package:provider/provider.dart';
 import '../content_provider.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 /// Presents an interactive quiz. After submitting answers, the user can
 /// complete the session which navigates to the progress screen using
 /// [Navigator.pushNamed].
-class InteractiveEvaluationScreen extends StatelessWidget {
+class InteractiveEvaluationScreen extends StatefulWidget {
   const InteractiveEvaluationScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  State<InteractiveEvaluationScreen> createState() =>
+      _InteractiveEvaluationScreenState();
+}
+
+class _InteractiveEvaluationScreenState
+    extends State<InteractiveEvaluationScreen> {
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetch();
+  }
+
+  Future<void> _fetch() async {
     final provider = Provider.of<ContentProvider>(context, listen: false);
-    // TODO: POST /study-mode with mode=interactive_evaluation
+    try {
+      final url = Uri.parse('http://10.0.2.2:8000/study-mode');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'text': provider.text, 'mode': 'exercises'}),
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final ex = (data['exercises'] as List? ?? [])
+            .map<Map<String, dynamic>>( (e) => Map<String, dynamic>.from(e as Map))
+            .toList();
+        provider.setExercises(ex);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to load exercises')),
+        );
+      }
+    } catch (_) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Network error')),
+      );
+    }
+    if (mounted) setState(() => _loading = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final exercises = context.watch<ContentProvider>().exercises;
     return Scaffold(
       appBar: AppBar(title: const Text('Interactive Evaluation')),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
-        child: Column(
-          children: [
-            const QuizQuestionCard(
-              question: 'Flutter is written in which language?',
-              choices: ['Java', 'Dart', 'Kotlin', 'Swift'],
-              correctIndex: 1,
-            ),
-            const SizedBox(height: 16),
-            PrimaryButton(label: 'Submit', onPressed: () {}),
-            const SizedBox(height: 16),
-            PrimaryButton(
-              label: 'Complete Session',
-              onPressed: () => Navigator.pushNamed(context, Routes.progress),
-            ),
-          ],
-        ),
+        child: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : Column(
+                children: [
+                  if (exercises.isNotEmpty)
+                    QuizQuestionCard(
+                      question: exercises.first['question'] ?? '',
+                      choices:
+                          List<String>.from(exercises.first['choices'] ?? []),
+                      correctIndex:
+                          exercises.first['correctIndex'] as int? ?? 0,
+                    )
+                  else
+                    const Text('No questions generated'),
+                  const SizedBox(height: 16),
+                  PrimaryButton(label: 'Submit', onPressed: () {}),
+                  const SizedBox(height: 16),
+                  PrimaryButton(
+                    label: 'Complete Session',
+                    onPressed: () =>
+                        Navigator.pushNamed(context, Routes.progress),
+                  ),
+                ],
+              ),
       ),
     );
   }

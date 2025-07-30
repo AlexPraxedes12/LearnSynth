@@ -33,6 +33,8 @@ class _PdfPickerScreenState extends State<PdfPickerScreen> {
     }
 
     final path = result.files.single.path!;
+    final provider = Provider.of<ContentProvider>(context, listen: false);
+    provider.setPdfPath(path);
 
     setState(() => _loading = true);
 
@@ -55,7 +57,7 @@ class _PdfPickerScreenState extends State<PdfPickerScreen> {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         final text =
             (data['text'] ?? data['course'] ?? data['summary'] ?? '') as String;
-        Provider.of<ContentProvider>(context, listen: false).setText(text);
+        provider.setFileContent(path: path, text: text);
         if (mounted) {
           Navigator.pushNamed(context, Routes.loading);
         }

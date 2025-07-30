@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 
 import 'package:provider/provider.dart';
 import '../widgets/primary_button.dart';
@@ -31,34 +29,11 @@ class _TextInputScreenState extends State<TextInputScreen> {
   // before navigating to analysis.
   Future<void> _onContinuePressed() async {
     final provider = Provider.of<ContentProvider>(context, listen: false);
-    final text = _controller.text;
-
-    try {
-      final url = Uri.parse("http://10.0.2.2:8000/analyze");
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'text': text}),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final cleanedText = data['cleaned_text'] as String? ?? '';
-        provider.setText(cleanedText);
-        if (mounted) {
-          Navigator.pushNamed(context, Routes.loading);
-        }
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to upload content')),
-        );
-      }
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Network error')));
-      }
+    final text = _controller.text.trim();
+    if (text.isEmpty) return;
+    provider.setText(text);
+    if (mounted) {
+      Navigator.pushNamed(context, Routes.loading);
     }
   }
 
