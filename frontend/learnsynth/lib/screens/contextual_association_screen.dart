@@ -3,38 +3,81 @@ import '../widgets/primary_button.dart';
 import '../constants.dart';
 import 'package:provider/provider.dart';
 import '../content_provider.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 /// Encourages users to relate concepts to real‑world scenarios. Once
 /// complete, navigation continues to the progress screen using
 /// [Navigator.pushNamed].
-class ContextualAssociationScreen extends StatelessWidget {
+class ContextualAssociationScreen extends StatefulWidget {
   const ContextualAssociationScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  State<ContextualAssociationScreen> createState() =>
+      _ContextualAssociationScreenState();
+}
+
+class _ContextualAssociationScreenState
+    extends State<ContextualAssociationScreen> {
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetch();
+  }
+
+  Future<void> _fetch() async {
     final provider = Provider.of<ContentProvider>(context, listen: false);
-    // TODO: POST /study-mode with mode=contextual_association
+    try {
+      final url = Uri.parse('http://10.0.2.2:8000/study-mode');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'text': provider.text, 'mode': 'exercises'}),
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final ex = (data['exercises'] as List? ?? [])
+            .map<Map<String, dynamic>>( (e) => Map<String, dynamic>.from(e as Map))
+            .toList();
+        provider.setExercises(ex);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to load exercises')),
+        );
+      }
+    } catch (_) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Network error')),
+      );
+    }
+    if (mounted) setState(() => _loading = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final exercises = context.watch<ContentProvider>().exercises;
     return Scaffold(
       appBar: AppBar(title: const Text('Contextual Association')),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
-        child: Column(
-          children: [
-            const Text(
-              'Main content text goes here',
-              style: TextStyle(fontSize: 16),
-            ),
-            const SizedBox(height: 16),
-            const Text('📚'),
-            const SizedBox(height: 16),
-            const Text('Learning Flutter is like assembling building blocks.'),
-            const SizedBox(height: 16),
-            PrimaryButton(
-              label: 'Complete Session',
-              onPressed: () => Navigator.pushNamed(context, Routes.progress),
-            ),
-          ],
-        ),
+        child: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : Column(
+                children: [
+                  if (exercises.isNotEmpty)
+                    Text(exercises.first.toString())
+                  else
+                    const Text('No exercises generated'),
+                  const SizedBox(height: 16),
+                  PrimaryButton(
+                    label: 'Complete Session',
+                    onPressed: () =>
+                        Navigator.pushNamed(context, Routes.progress),
+                  ),
+                ],
+              ),
       ),
     );
   }

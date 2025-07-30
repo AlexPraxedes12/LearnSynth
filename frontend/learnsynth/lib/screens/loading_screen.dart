@@ -3,6 +3,8 @@ import '../widgets/quote_card.dart';
 import '../constants.dart';
 import 'package:provider/provider.dart';
 import '../content_provider.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 /// Shows a loading state while content is being processed. Once the
 /// processing is complete, the user can proceed to the analysis
@@ -21,16 +23,36 @@ class _LoadingScreenState extends State<LoadingScreen> {
   void initState() {
     super.initState();
     final provider = Provider.of<ContentProvider>(context, listen: false);
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        // TODO: POST /analyze with provider.text
-        provider.setAnalysis(
-          'Mock summary for content',
-          ['Topic 1', 'Topic 2'],
+    () async {
+      try {
+        final url = Uri.parse('http://10.0.2.2:8000/analyze');
+        final response = await http.post(
+          url,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'text': provider.text}),
         );
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body) as Map<String, dynamic>;
+          provider.setAnalysis(
+            data['summary'] as String? ?? '',
+            List<String>.from(data['topics'] as List? ?? []),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Analysis failed')),
+          );
+        }
+      } catch (_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Network error')),
+          );
+        }
+      }
+      if (mounted) {
         Navigator.pushNamed(context, Routes.analysis);
       }
-    });
+    }();
   }
 
   @override

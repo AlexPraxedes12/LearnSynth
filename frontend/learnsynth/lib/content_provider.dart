@@ -15,6 +15,9 @@ class ContentProvider extends ChangeNotifier {
   String? filePath;
   String? summary;
   List<String> topics = [];
+  List<Map<String, String>> flashcards = [];
+  Map<String, dynamic>? conceptMap;
+  List<Map<String, dynamic>> exercises = [];
   final List<ContentItem> _saved = [];
 
   /// List of all content pieces added by the user.
@@ -48,9 +51,38 @@ class ContentProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Store both [path] and [text] for the same content item.
+  void setFileContent({required String path, required String text}) {
+    this.text = text;
+    filePath = path;
+    final index = _saved.lastIndexWhere((item) => item.filePath == path);
+    final item = ContentItem(text: text, filePath: path);
+    if (index != -1) {
+      _saved[index] = item;
+    } else {
+      _saved.add(item);
+    }
+    notifyListeners();
+  }
+
   void setAnalysis(String summaryText, List<String> topicsList) {
     summary = summaryText;
     topics = topicsList;
+    notifyListeners();
+  }
+
+  void setFlashcards(List<Map<String, String>> cards) {
+    flashcards = cards;
+    notifyListeners();
+  }
+
+  void setConceptMap(Map<String, dynamic> map) {
+    conceptMap = map;
+    notifyListeners();
+  }
+
+  void setExercises(List<Map<String, dynamic>> list) {
+    exercises = list;
     notifyListeners();
   }
 
