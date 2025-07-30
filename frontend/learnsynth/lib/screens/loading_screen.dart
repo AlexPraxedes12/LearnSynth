@@ -32,7 +32,7 @@ class _LoadingScreenState extends State<LoadingScreen> {
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'text': provider.text}),
+        body: jsonEncode({'text': provider.rawText ?? provider.text}),
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -43,9 +43,20 @@ class _LoadingScreenState extends State<LoadingScreen> {
           Navigator.pushNamed(context, Routes.analysis);
         }
       } else {
+        var message = 'Analysis failed';
+        try {
+          final decoded = jsonDecode(response.body);
+          if (decoded is Map<String, dynamic> && decoded['detail'] != null) {
+            message = decoded['detail'].toString();
+          } else {
+            message = decoded.toString();
+          }
+        } catch (_) {
+          if (response.body.isNotEmpty) message = response.body;
+        }
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Analysis failed')),
+            SnackBar(content: Text(message)),
           );
         }
       }

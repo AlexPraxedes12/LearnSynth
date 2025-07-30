@@ -11,7 +11,12 @@ class ContentItem {
 
 /// Stores the content added by the user so it can be accessed across screens.
 class ContentProvider extends ChangeNotifier {
+  /// Cleaned or processed text used throughout the study flow.
   String? text;
+
+  /// Raw text extracted from uploaded files before any processing.
+  String? rawText;
+
   String? filePath;
   String? summary;
   List<String> topics = [];
@@ -26,6 +31,7 @@ class ContentProvider extends ChangeNotifier {
 
   void setText(String value) {
     text = value;
+    rawText = value;
     filePath = null;
     _saved.add(ContentItem(text: value));
     notifyListeners();
@@ -53,7 +59,9 @@ class ContentProvider extends ChangeNotifier {
   }
 
   /// Store both [path] and [text] for the same content item.
+  /// The raw text is kept in [rawText] so it can be processed later.
   void setFileContent({required String path, required String text}) {
+    rawText = text;
     this.text = text;
     filePath = path;
     final index = _saved.lastIndexWhere((item) => item.filePath == path);
