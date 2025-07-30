@@ -28,16 +28,20 @@ class _MemorizationScreenState extends State<MemorizationScreen> {
 
   Future<void> _fetch() async {
     final provider = Provider.of<ContentProvider>(context, listen: false);
+    if (provider.flashcards.isNotEmpty) {
+      setState(() => _loading = false);
+      return;
+    }
     try {
       final url = Uri.parse('http://10.0.2.2:8000/study-mode');
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'text': provider.text, 'mode': 'flashcards'}),
+        body: jsonEncode({'text': provider.text, 'mode': 'memorization'}),
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final cards = (data['cards'] as List? ?? [])
+        final cards = (data['flashcards'] as List? ?? data['cards'] as List? ?? [])
             .map<Map<String, String>>(
                 (e) => Map<String, String>.from(e as Map))
             .toList();

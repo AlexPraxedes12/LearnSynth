@@ -28,16 +28,22 @@ class _DeepUnderstandingScreenState extends State<DeepUnderstandingScreen> {
 
   Future<void> _fetch() async {
     final provider = Provider.of<ContentProvider>(context, listen: false);
+    if (provider.conceptMap != null) {
+      setState(() => _loading = false);
+      return;
+    }
     try {
       final url = Uri.parse('http://10.0.2.2:8000/study-mode');
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'text': provider.text, 'mode': 'concept_map'}),
+        body: jsonEncode({'text': provider.text, 'mode': 'deep_understanding'}),
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        provider.setConceptMap(data);
+        final map = Map<String, dynamic>.from(
+            data['conceptMap'] ?? data);
+        provider.setConceptMap(map);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Failed to load concept map')),
@@ -63,7 +69,19 @@ class _DeepUnderstandingScreenState extends State<DeepUnderstandingScreen> {
             : Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(map != null ? map.toString() : 'No concept map'),
+                  if (map != null)
+                    ...List.generate(
+                      (map['links'] as List? ?? []).length,
+                      (i) {
+                        final link = (map['links'] as List)[i] as Map<String, dynamic>;
+                        final src = link['source'];
+                        final tgt = link['target'];
+                        final lbl = link['label'] ?? '';
+                        return Text('$src --$lbl--> $tgt');
+                      },
+                    )
+                  else
+                    const Text('No concept map'),
                   const SizedBox(height: 16),
                   PrimaryButton(
                     label: 'Complete Session',

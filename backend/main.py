@@ -21,7 +21,12 @@ class StudyRequest(BaseModel):
     """Request model for study mode generation."""
 
     text: str
-    mode: Literal["flashcards", "concept_map", "exercises"]
+    mode: Literal[
+        "memorization",
+        "deep_understanding",
+        "contextual_association",
+        "interactive_evaluation",
+    ]
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -62,40 +67,64 @@ def analyze_text(text: str = Body(..., embed=True)):
 @app.post('/study-mode', tags=["Study"])
 def study_mode(data: StudyRequest):
     """Generate study materials in the requested mode."""
-    if data.mode == "flashcards":
+    if data.mode == "memorization":
         prompt = (
             "Create flashcard question-answer pairs as JSON in the form "
-            "{'cards': [{'question': str, 'answer': str}]} for the following text:\n\n"
+            "{'flashcards': [{'question': str, 'answer': str}]} for the following text:\n\n"
             + data.text
         )
         try:
             result = ask_llm(prompt)
             try:
-                return json.loads(result)
+                payload = json.loads(result)
+                if "flashcards" not in payload and "cards" in payload:
+                    payload = {"flashcards": payload.get("cards")}
+                return payload
             except Exception:
-                return {"cards": result}
+                return {"flashcards": result}
         except Exception as exc:
             logger.exception("Flashcard generation failed: %s", exc)
             raise HTTPException(status_code=500, detail="Internal server error")
 
-    if data.mode == "concept_map":
+    if data.mode == "deep_understanding":
         try:
-            return concept_map.generate_concept_map(data.text)
+            return {"conceptMap": concept_map.generate_concept_map(data.text)}
         except Exception as exc:
             logger.exception("Concept map generation failed: %s", exc)
             raise HTTPException(status_code=500, detail="Internal server error")
 
-    if data.mode == "exercises":
+    if data.mode == "contextual_association":
         prompt = (
-            "Generate quizzes, open questions and analogies as JSON for the "
-            "following text:\n\n" + data.text
+            "Generate contextual practice exercises as JSON in the form "
+            "{'contextualExercises': [...]} for the following text:\n\n" + data.text
         )
         try:
             result = ask_llm(prompt)
             try:
-                return json.loads(result)
+                payload = json.loads(result)
+                if "contextualExercises" not in payload and "exercises" in payload:
+                    payload = {"contextualExercises": payload.get("exercises")}
+                return payload
             except Exception:
-                return {"exercises": result}
+                return {"contextualExercises": result}
+        except Exception as exc:
+            logger.exception("Exercise generation failed: %s", exc)
+            raise HTTPException(status_code=500, detail="Internal server error")
+
+    if data.mode == "interactive_evaluation":
+        prompt = (
+            "Generate quiz questions as JSON in the form "
+            "{'evaluationQuestions': [...]} for the following text:\n\n" + data.text
+        )
+        try:
+            result = ask_llm(prompt)
+            try:
+                payload = json.loads(result)
+                if "evaluationQuestions" not in payload and "exercises" in payload:
+                    payload = {"evaluationQuestions": payload.get("exercises")}
+                return payload
+            except Exception:
+                return {"evaluationQuestions": result}
         except Exception as exc:
             logger.exception("Exercise generation failed: %s", exc)
             raise HTTPException(status_code=500, detail="Internal server error")

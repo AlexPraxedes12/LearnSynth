@@ -29,19 +29,23 @@ class _ContextualAssociationScreenState
 
   Future<void> _fetch() async {
     final provider = Provider.of<ContentProvider>(context, listen: false);
+    if (provider.contextualExercises.isNotEmpty) {
+      setState(() => _loading = false);
+      return;
+    }
     try {
       final url = Uri.parse('http://10.0.2.2:8000/study-mode');
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'text': provider.text, 'mode': 'exercises'}),
+        body: jsonEncode({'text': provider.text, 'mode': 'contextual_association'}),
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final ex = (data['exercises'] as List? ?? [])
+        final ex = (data['contextualExercises'] as List? ?? data['exercises'] as List? ?? [])
             .map<Map<String, dynamic>>( (e) => Map<String, dynamic>.from(e as Map))
             .toList();
-        provider.setExercises(ex);
+        provider.setContextualExercises(ex);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Failed to load exercises')),
@@ -57,7 +61,7 @@ class _ContextualAssociationScreenState
 
   @override
   Widget build(BuildContext context) {
-    final exercises = context.watch<ContentProvider>().exercises;
+    final exercises = context.watch<ContentProvider>().contextualExercises;
     return Scaffold(
       appBar: AppBar(title: const Text('Contextual Association')),
       body: Padding(
@@ -76,7 +80,7 @@ class _ContextualAssociationScreenState
                           return Card(
                             child: Padding(
                               padding: const EdgeInsets.all(16.0),
-                              child: Text(ex.toString()),
+                              child: Text(ex['question']?.toString() ?? ex['prompt']?.toString() ?? ex.toString()),
                             ),
                           );
                         },
