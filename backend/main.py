@@ -31,6 +31,8 @@ class StudyRequest(BaseModel):
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+MAX_UPLOAD_SIZE = 5 * 1024 * 1024  # 5 MB
+
 app = FastAPI()
 
 
@@ -38,6 +40,12 @@ app = FastAPI()
 async def upload_content(file: UploadFile = File(...)):
     """Extract text from an uploaded file."""
     try:
+        file.file.seek(0, os.SEEK_END)
+        size = file.file.tell()
+        file.file.seek(0)
+        if size > MAX_UPLOAD_SIZE:
+            raise HTTPException(status_code=400, detail="File too large (max 5MB)")
+
         return generator.generate_course(file)
     except HTTPException as exc:
         raise exc
