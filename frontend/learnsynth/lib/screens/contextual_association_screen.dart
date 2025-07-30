@@ -67,7 +67,21 @@ class _ContextualAssociationScreenState
             : Column(
                 children: [
                   if (exercises.isNotEmpty)
-                    Text(exercises.first.toString())
+                    Expanded(
+                      child: ListView.separated(
+                        itemCount: exercises.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 16),
+                        itemBuilder: (context, index) {
+                          final ex = exercises[index];
+                          return Card(
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Text(ex.toString()),
+                            ),
+                          );
+                        },
+                      ),
+                    )
                   else
                     const Text('No exercises generated'),
                   const SizedBox(height: 16),
