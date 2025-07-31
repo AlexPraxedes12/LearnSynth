@@ -4,7 +4,6 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
-import 'package:flutter_video_compress/flutter_video_compress.dart';
 import 'package:provider/provider.dart';
 
 import '../widgets/primary_button.dart';
@@ -23,7 +22,6 @@ class _VideoPickerScreenState extends State<VideoPickerScreen> {
   String? _path;
   String? _name;
   Uint8List? _bytes;
-  final _videoCompressor = FlutterVideoCompress();
   static const int _maxSize = 5 * 1024 * 1024;
 
   Future<void> _pickVideo() async {
@@ -33,10 +31,24 @@ class _VideoPickerScreenState extends State<VideoPickerScreen> {
     );
     if (!mounted) return;
     if (result != null && result.files.single.path != null) {
+      final file = result.files.single;
+      if (file.size > _maxSize) {
+        if (mounted) {
+          await showDialog<void>(
+            context: context,
+            builder: (context) => const AlertDialog(
+              content: Text(
+                'The selected file is too large (max 5MB). Please choose a smaller file.',
+              ),
+            ),
+          );
+        }
+        return;
+      }
       setState(() {
-        _path = result.files.single.path!;
-        _name = result.files.single.name;
-        _bytes = result.files.single.bytes;
+        _path = file.path!;
+        _name = file.name;
+        _bytes = file.bytes;
       });
     }
   }
@@ -48,36 +60,16 @@ class _VideoPickerScreenState extends State<VideoPickerScreen> {
 
     if (_bytes!.length > _maxSize) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Compressing video...')),
-        );
-      }
-      try {
-        final info = await _videoCompressor.compressVideo(
-          _path!,
-          quality: VideoQuality.MediumQuality,
-        );
-        if (info != null && info.file != null) {
-          final compressed = await info.file!.readAsBytes();
-          _bytes = compressed;
-        }
-      } catch (e) {
-        debugPrint('Compression error: $e');
-      }
-      if (_bytes != null && _bytes!.length > _maxSize) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('File still too large after compression'),
+        await showDialog<void>(
+          context: context,
+          builder: (context) => const AlertDialog(
+            content: Text(
+              'The selected file is too large (max 5MB). Please choose a smaller file.',
             ),
-          );
-        }
-        return;
-      } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Video compressed')),
+          ),
         );
       }
+      return;
     }
 
     // TODO: show loading indicator while uploading
