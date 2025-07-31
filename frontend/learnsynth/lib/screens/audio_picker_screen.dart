@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
-import 'package:flutter_audio_compress/flutter_audio_compress.dart';
 
 import '../constants.dart';
 import '../content_provider.dart';
@@ -24,7 +23,6 @@ class _AudioPickerScreenState extends State<AudioPickerScreen> {
   String? _path;
   String? _name;
   Uint8List? _bytes;
-  final _audioCompressor = FlutterAudioCompress();
   static const int _maxSize = 5 * 1024 * 1024;
 
   Future<void> _pickAudio() async {
@@ -35,10 +33,24 @@ class _AudioPickerScreenState extends State<AudioPickerScreen> {
     );
     if (!mounted) return;
     if (result != null && result.files.single.path != null) {
+      final file = result.files.single;
+      if (file.size > _maxSize) {
+        if (mounted) {
+          await showDialog<void>(
+            context: context,
+            builder: (context) => const AlertDialog(
+              content: Text(
+                'The selected file is too large (max 5MB). Please choose a smaller file.',
+              ),
+            ),
+          );
+        }
+        return;
+      }
       setState(() {
-        _path = result.files.single.path!;
-        _name = result.files.single.name;
-        _bytes = result.files.single.bytes;
+        _path = file.path!;
+        _name = file.name;
+        _bytes = file.bytes;
       });
     }
   }
@@ -50,33 +62,16 @@ class _AudioPickerScreenState extends State<AudioPickerScreen> {
 
     if (_bytes!.length > _maxSize) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Compressing audio...')),
-        );
-      }
-      try {
-        final file = await _audioCompressor.compressAudio(_path!);
-        if (file != null) {
-          final compressed = await file.readAsBytes();
-          _bytes = compressed;
-        }
-      } catch (e) {
-        debugPrint('Compression error: $e');
-      }
-      if (_bytes != null && _bytes!.length > _maxSize) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('File still too large after compression'),
+        await showDialog<void>(
+          context: context,
+          builder: (context) => const AlertDialog(
+            content: Text(
+              'The selected file is too large (max 5MB). Please choose a smaller file.',
             ),
-          );
-        }
-        return;
-      } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Audio compressed')),
+          ),
         );
       }
+      return;
     }
 
     // TODO: show loading indicator while uploading
