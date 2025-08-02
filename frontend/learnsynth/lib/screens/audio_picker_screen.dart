@@ -4,8 +4,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
-import 'package:ffmpeg_kit_flutter_min_gpl/ffmpeg_kit.dart';
-import 'package:whisper_dart/whisper_dart.dart' as whisper; // ignore: unused_import
+
+import '../services/transcription_service.dart';
 
 import '../constants.dart';
 import '../content_provider.dart';
@@ -46,8 +46,8 @@ class _AudioPickerScreenState extends State<AudioPickerScreen> {
           _transcript = null;
         });
 
-        final wavFile = await _ensureWav(_selectedFile!);
-        final transcription = await _transcribeAudio(wavFile);
+        final transcription =
+            await TranscriptionService().transcribeAudio(_selectedFile!);
         if (!mounted) return;
         context.read<ContentProvider>().setText(transcription);
         setState(() {
@@ -61,21 +61,6 @@ class _AudioPickerScreenState extends State<AudioPickerScreen> {
     }
   }
 
-  Future<File> _ensureWav(File file) async {
-    final path = file.path;
-    if (path.toLowerCase().endsWith('.wav')) {
-      return file;
-    }
-    final outPath = '${path}_converted.wav';
-    await FFmpegKit.execute('-i "$path" -ac 1 -ar 16000 "$outPath"');
-    return File(outPath);
-  }
-
-  Future<String> _transcribeAudio(File file) async {
-    // TODO: Replace with real transcription using whisper_dart or another STT package.
-    await Future.delayed(const Duration(seconds: 1));
-    return 'Transcription placeholder';
-  }
 
   void _continue() {
     Navigator.pushNamed(context, Routes.loading);
