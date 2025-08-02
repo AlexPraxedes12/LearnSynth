@@ -34,11 +34,9 @@ dependencies:
 
   # Allows picking local files for the mocked upload flow.
   file_picker: ^10.2.0
-  path_provider: ^2.1.1
   provider: ^6.1.1
   http: ^1.4.0
   video_compress: ^3.1.2
-  ffmpeg_kit_flutter_full_gpl: ^4.5.1
   permission_handler: ^11.3.0
 
   # The following adds the Cupertino Icons font to your application.
