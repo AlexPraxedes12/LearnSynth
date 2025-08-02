@@ -39,22 +39,35 @@ class _AudioPickerScreenState extends State<AudioPickerScreen> {
         type: FileType.custom,
         allowedExtensions: ['mp3', 'wav', 'm4a'],
       );
-      if (result != null && result.files.single.path != null) {
-        _selectedFile = File(result.files.single.path!);
-        setState(() {
-          _isProcessing = true;
-          _transcript = null;
-        });
-
-        final transcription =
-            await TranscriptionService().transcribeAudio(_selectedFile!);
-        if (!mounted) return;
-        context.read<ContentProvider>().setText(transcription);
-        setState(() {
-          _transcript = transcription;
-          _isProcessing = false;
-        });
+      if (result == null || result.files.single.path == null) {
+        _showError('No file selected.');
+        return;
       }
+      _selectedFile = File(result.files.single.path!);
+      setState(() {
+        _isProcessing = true;
+        _transcript = null;
+      });
+
+      final ffmpegResult =
+          await TranscriptionService().transcribeAudio(_selectedFile!);
+      if (!ffmpegResult.isSuccess) {
+        _showError('Transcription failed');
+        if (mounted) setState(() => _isProcessing = false);
+        return;
+      }
+      final transcription = ffmpegResult.data ?? '';
+      if (transcription.trim().isEmpty) {
+        _showError('No text produced.');
+        if (mounted) setState(() => _isProcessing = false);
+        return;
+      }
+      if (!mounted) return;
+      context.read<ContentProvider>().setText(transcription);
+      setState(() {
+        _transcript = transcription;
+        _isProcessing = false;
+      });
     } catch (e) {
       _showError(e.toString());
       if (mounted) setState(() => _isProcessing = false);
