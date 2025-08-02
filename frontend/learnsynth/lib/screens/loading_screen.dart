@@ -22,7 +22,18 @@ class _LoadingScreenState extends State<LoadingScreen> {
   @override
   void initState() {
     super.initState();
-    _analyze();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkAndAnalyze());
+  }
+
+  Future<void> _checkAndAnalyze() async {
+    final provider = Provider.of<ContentProvider>(context, listen: false);
+    if (provider.summary != null && provider.summary!.isNotEmpty) {
+      if (mounted) {
+        Navigator.pushNamed(context, Routes.analysis);
+      }
+      return;
+    }
+    await _analyze();
   }
 
   Future<void> _analyze() async {
