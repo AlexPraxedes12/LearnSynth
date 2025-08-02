@@ -3,12 +3,10 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:ffmpeg_kit_flutter_min_gpl/ffmpeg_kit.dart';
-import 'package:whisper_dart/whisper_dart.dart' as whisper; // ignore: unused_import
-
 import '../widgets/primary_button.dart';
 import '../constants.dart';
 import '../content_provider.dart';
+import '../services/transcription_service.dart';
 
 /// Picks a video file, extracts the audio track, and transcribes it locally.
 class VideoPickerScreen extends StatefulWidget {
@@ -33,10 +31,9 @@ class _VideoPickerScreenState extends State<VideoPickerScreen> {
       });
 
       try {
-        final audioPath = '${_videoFile!.path}_audio.wav';
-        await FFmpegKit.execute(
-            '-i "${_videoFile!.path}" -vn -acodec pcm_s16le -ar 16000 -ac 1 "$audioPath"');
-        final text = await _transcribeAudio(File(audioPath));
+        final service = TranscriptionService();
+        final audioFile = await service.extractAudioFromVideo(_videoFile!);
+        final text = await service.transcribeAudio(audioFile);
         if (!mounted) return;
         context.read<ContentProvider>().setText(text);
         setState(() {
@@ -50,11 +47,6 @@ class _VideoPickerScreenState extends State<VideoPickerScreen> {
     }
   }
 
-  Future<String> _transcribeAudio(File file) async {
-    // TODO: Replace with real transcription using whisper_dart or another STT package.
-    await Future.delayed(const Duration(seconds: 1));
-    return 'Transcription placeholder';
-  }
 
   void _continue() {
     Navigator.pushNamed(context, Routes.loading);
