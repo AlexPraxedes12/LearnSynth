@@ -3,9 +3,7 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:ffmpeg_kit_flutter_full_gpl/ffmpeg_kit.dart';
 import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 
@@ -13,9 +11,8 @@ import '../constants.dart';
 import '../content_provider.dart';
 import '../widgets/primary_button.dart';
 
-/// Screen that lets the user select an audio file, compress it and upload it
-/// to the backend. The backend returns cleaned text which is stored in
-/// [ContentProvider] for later processing.
+/// Screen that lets the user pick an audio file, transcribe it locally and
+/// upload the resulting text for analysis.
 class AudioPickerScreen extends StatefulWidget {
   const AudioPickerScreen({super.key});
 
@@ -24,6 +21,7 @@ class AudioPickerScreen extends StatefulWidget {
 }
 
 class _AudioPickerScreenState extends State<AudioPickerScreen> {
+  File? _selectedFile;
   bool _isProcessing = false;
 
   Future<void> _pickAudio() async {
@@ -41,54 +39,58 @@ class _AudioPickerScreenState extends State<AudioPickerScreen> {
         allowedExtensions: ['mp3', 'wav', 'm4a'],
       );
       if (result != null && result.files.single.path != null) {
-        final file = File(result.files.single.path!);
-        final compressed = await _compressAudio(file);
-        if (compressed != null) {
-          await _uploadAudio(compressed);
-        } else {
-          _showError('Compression failed');
-        }
+        _selectedFile = File(result.files.single.path!);
+        setState(() {});
       }
     } catch (e) {
       _showError(e.toString());
     }
   }
 
-  Future<File?> _compressAudio(File input) async {
-    try {
-      final dir = await getTemporaryDirectory();
-      final outPath = '${dir.path}/compressed_audio.mp3';
-      await FFmpegKit.execute('-i "${input.path}" -b:a 64k -y "$outPath"');
-      final output = File(outPath);
-      return output.existsSync() ? output : null;
-    } catch (_) {
-      return null;
-    }
+  Future<String> _transcribeAudio(File file) async {
+    // TODO: Replace with real transcription using whisper_dart or platform channel.
+    await Future.delayed(const Duration(seconds: 1));
+    return 'Transcription placeholder';
   }
 
-  Future<void> _uploadAudio(File file) async {
+  Future<void> _continue() async {
+    if (_selectedFile == null) return;
     setState(() => _isProcessing = true);
     try {
-      final request = http.MultipartRequest(
-        'POST',
-        Uri.parse('http://10.0.2.2:8000/upload-audio'),
-      );
-      request.files.add(await http.MultipartFile.fromPath('file', file.path));
+      final transcription = await _transcribeAudio(_selectedFile!);
+      context
+          .read<ContentProvider>()
+          .setFileContent(path: _selectedFile!.path, text: transcription);
 
-      final streamed = await request.send();
-      final response = await http.Response.fromStream(streamed);
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final cleanedText = data['cleaned_text'] as String? ?? '';
-        context.read<ContentProvider>().setText(cleanedText);
+      final uploadRes = await http.post(
+        Uri.parse('http://10.0.2.2:8000/upload-content'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'text': transcription}),
+      );
+      if (uploadRes.statusCode != 200) {
+        _showError('Upload failed: ${uploadRes.statusCode}');
+        return;
+      }
+
+      final analyzeRes = await http.post(
+        Uri.parse('http://10.0.2.2:8000/analyze'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'text': transcription}),
+      );
+
+      if (analyzeRes.statusCode == 200) {
+        final data = jsonDecode(analyzeRes.body) as Map<String, dynamic>;
+        final summary = data['summary'] as String? ?? '';
+        final topics = List<String>.from(data['topics'] as List? ?? []);
+        context.read<ContentProvider>().setAnalysis(summary, topics);
         if (mounted) {
           Navigator.pushNamed(context, Routes.loading);
         }
       } else {
-        _showError('Upload failed: ${response.statusCode}');
+        _showError('Analysis failed: ${analyzeRes.statusCode}');
       }
     } catch (e) {
-      _showError('Upload failed');
+      _showError('Processing failed');
     } finally {
       if (mounted) setState(() => _isProcessing = false);
     }
@@ -111,9 +113,19 @@ class _AudioPickerScreenState extends State<AudioPickerScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             PrimaryButton(
-              label: 'Select Audio File',
+              label: 'Select Audio',
               onPressed: _isProcessing ? null : _pickAudio,
             ),
+            const SizedBox(height: 16),
+            PrimaryButton(
+              label: 'Continue',
+              onPressed:
+                  (_selectedFile != null && !_isProcessing) ? _continue : null,
+            ),
+            if (_isProcessing) ...[
+              const SizedBox(height: 20),
+              const CircularProgressIndicator(),
+            ],
           ],
         ),
       ),
