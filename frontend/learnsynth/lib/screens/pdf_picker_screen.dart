@@ -1,14 +1,15 @@
-import 'dart:convert';
-import 'package:flutter/material.dart';
+import 'dart:io';
+
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:syncfusion_flutter_pdf/pdf.dart';
+
 import '../widgets/primary_button.dart';
 import '../constants.dart';
 import '../content_provider.dart';
-import 'package:http/http.dart' as http;
-import 'package:http_parser/http_parser.dart';
 
-/// Allows the user to pick a PDF file and reads its text.
+/// Allows the user to pick a PDF file and extract its text locally.
 class PdfPickerScreen extends StatefulWidget {
   const PdfPickerScreen({super.key});
 
@@ -17,7 +18,9 @@ class PdfPickerScreen extends StatefulWidget {
 }
 
 class _PdfPickerScreenState extends State<PdfPickerScreen> {
-  bool _loading = false;
+  File? _file;
+  String? _text;
+  bool _isProcessing = false;
 
   Future<void> _pickPdf() async {
     final result = await FilePicker.platform.pickFiles(
@@ -32,54 +35,38 @@ class _PdfPickerScreenState extends State<PdfPickerScreen> {
       return;
     }
 
-    final path = result.files.single.path!;
-    final provider = Provider.of<ContentProvider>(context, listen: false);
-    provider.setPdfPath(path);
-
-    setState(() => _loading = true);
+    _file = File(result.files.single.path!);
+    setState(() {
+      _isProcessing = true;
+      _text = null;
+    });
 
     try {
-      final url = Uri.parse('http://10.0.2.2:8000/upload-content');
-      final request = http.MultipartRequest('POST', url);
-      request.files.add(
-        await http.MultipartFile.fromPath(
-          'file',
-          path,
-          contentType: MediaType('application', 'pdf'),
-        ),
-      );
-      debugPrint('Uploading PDF to $url');
-
-      final streamed = await request.send();
-      final response = await http.Response.fromStream(streamed);
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final text =
-            (data['text'] ?? data['course'] ?? data['summary'] ?? '') as String;
-        provider.setFileContent(path: path, text: text);
-        if (mounted) {
-          Navigator.pushNamed(context, Routes.loading);
-        }
-      } else {
-        debugPrint('Upload failed: ${response.statusCode}');
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to upload file')),
-        );
-      }
-    } catch (e, st) {
-      debugPrint('Upload error: $e');
-      debugPrintStack(stackTrace: st);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Network error')),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _loading = false);
-      }
+      final bytes = await _file!.readAsBytes();
+      final document = PdfDocument(inputBytes: bytes);
+      final extracted = PdfTextExtractor(document).extractText();
+      document.dispose();
+      if (!mounted) return;
+      context.read<ContentProvider>().setText(extracted);
+      setState(() {
+        _text = extracted;
+        _isProcessing = false;
+      });
+    } catch (e) {
+      _showError('Failed to process PDF');
+      if (mounted) setState(() => _isProcessing = false);
     }
+  }
+
+  void _continue() {
+    Navigator.pushNamed(context, Routes.loading);
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   @override
@@ -88,15 +75,26 @@ class _PdfPickerScreenState extends State<PdfPickerScreen> {
       appBar: AppBar(title: const Text('Upload PDF')),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
-        child: Center(
-          child: _loading
-              ? const CircularProgressIndicator()
-              : PrimaryButton(
-                  label: 'Choose PDF',
-                  onPressed: _pickPdf,
-                ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            PrimaryButton(
+              label: 'Choose PDF',
+              onPressed: _isProcessing ? null : _pickPdf,
+            ),
+            const SizedBox(height: 16),
+            PrimaryButton(
+              label: 'Continue',
+              onPressed: (_text != null && !_isProcessing) ? _continue : null,
+            ),
+            if (_isProcessing) ...[
+              const SizedBox(height: 20),
+              const CircularProgressIndicator(),
+            ],
+          ],
         ),
       ),
     );
   }
 }
+
