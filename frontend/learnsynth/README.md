@@ -18,5 +18,5 @@ samples, guidance on mobile development, and a full API reference.
 Video compression previously relied on the `flutter_video_compress` package.
 This dependency has been removed for compatibility with recent Flutter
 versions. If compression functionality is needed in the future, consider using
-[`ffmpeg_kit_flutter`](https://github.com/tanersener/ffmpeg-kit) which is better
+[`ffmpeg_kit_flutter_min_gpl`](https://github.com/tanersener/ffmpeg-kit) which is better
 maintained and offers extensive media processing features.
