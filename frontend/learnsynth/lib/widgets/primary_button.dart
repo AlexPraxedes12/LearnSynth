@@ -5,8 +5,8 @@ import '../theme/app_theme.dart';
 /// upstream repository. Applies consistent styling and full‑width layout.
 class PrimaryButton extends StatelessWidget {
   final String label;
-  final VoidCallback onPressed;
-  const PrimaryButton({super.key, required this.label, required this.onPressed});
+  final VoidCallback? onPressed;
+  const PrimaryButton({super.key, required this.label, this.onPressed});
 
   @override
   Widget build(BuildContext context) {
