@@ -1,18 +1,17 @@
 import 'dart:convert';
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_sound/flutter_sound.dart';
-import 'package:provider/provider.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
 
 import '../constants.dart';
 import '../content_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/primary_button.dart';
 
-/// Allows the user to record audio.
+/// Allows the user to pick an existing audio file and upload it.
 class AudioPickerScreen extends StatefulWidget {
   const AudioPickerScreen({super.key});
 
@@ -21,61 +20,36 @@ class AudioPickerScreen extends StatefulWidget {
 }
 
 class _AudioPickerScreenState extends State<AudioPickerScreen> {
-  FlutterSoundRecorder? _audioRecorder = FlutterSoundRecorder();
-  bool _isRecorderInitialized = false;
-  bool _isRecording = false;
   String? _path;
+  String? _name;
+  Uint8List? _bytes;
 
-  @override
-  void initState() {
-    super.initState();
-    initRecorder();
-  }
-
-  @override
-  void dispose() {
-    disposeRecorder();
-    super.dispose();
-  }
-
-  Future<void> initRecorder() async {
-    await _audioRecorder!.openRecorder();
-    _isRecorderInitialized = true;
-  }
-
-  void disposeRecorder() {
-    _audioRecorder!.closeRecorder();
-    _audioRecorder = null;
-  }
-
-  Future<void> startRecordingAndCompressing() async {
-    if (!_isRecorderInitialized) {
-      return;
-    }
-    await _audioRecorder!.startRecorder(
-      toFile: 'compressed_audio.aac',
-      codec: Codec.aacADTS,
+  Future<void> _pickAudio() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['mp3', 'wav', 'aac'],
+      withData: true,
     );
-    setState(() {
-      _isRecording = true;
-    });
-  }
-
-  Future<void> stopRecording() async {
-    final path = await _audioRecorder!.stopRecorder();
-    setState(() {
-      _isRecording = false;
-      _path = path;
-    });
+    if (!mounted) return;
+    if (result != null && result.files.single.path != null) {
+      setState(() {
+        _path = result.files.single.path;
+        _name = result.files.single.name;
+        _bytes = result.files.single.bytes;
+      });
+    }
   }
 
   Future<void> _continue() async {
-    if (_path == null) return;
-    final provider = Provider.of<ContentProvider>(context, listen: false);
-    provider.setAudioPath(_path!);
+    if (_bytes == null || _path == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No audio file selected.')),
+      );
+      return;
+    }
 
-    final file = File(_path!);
-    final bytes = await file.readAsBytes();
+    final provider = context.read<ContentProvider>();
+    provider.setAudioPath(_path!);
 
     try {
       final url = Uri.parse('http://10.0.2.2:8000/upload-content');
@@ -83,8 +57,8 @@ class _AudioPickerScreenState extends State<AudioPickerScreen> {
         ..files.add(
           http.MultipartFile.fromBytes(
             'file',
-            bytes,
-            filename: 'audio.aac',
+            _bytes!,
+            filename: _name ?? 'audio',
           ),
         );
       final streamed = await request.send();
@@ -110,20 +84,38 @@ class _AudioPickerScreenState extends State<AudioPickerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Record Audio')),
+      appBar: AppBar(title: const Text('Upload Audio')),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            if (_path != null)
-              Text('Recording saved at: $_path')
-            else if (_isRecording)
-              const Text('Recording...'),
+            if (_name != null)
+              Card(
+                color: AppTheme.accentGray,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 4,
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.audiotrack, color: AppTheme.accentTeal),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Text(
+                          _name!,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             const Spacer(),
             PrimaryButton(
-              label: _isRecording ? 'Stop Recording' : 'Start Recording',
-              onPressed: _isRecording ? stopRecording : startRecordingAndCompressing,
+              label: 'Choose Audio',
+              onPressed: _pickAudio,
             ),
             const SizedBox(height: 16),
             SizedBox(
@@ -137,7 +129,11 @@ class _AudioPickerScreenState extends State<AudioPickerScreen> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                onPressed: _path != null ? _continue : null,
+                onPressed: _bytes != null ? _continue : () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('No audio file selected.')),
+                  );
+                },
                 child: const Text('Continue'),
               ),
             ),
@@ -147,3 +143,4 @@ class _AudioPickerScreenState extends State<AudioPickerScreen> {
     );
   }
 }
+
