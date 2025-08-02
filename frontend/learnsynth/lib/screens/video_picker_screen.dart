@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
+import 'package:video_compress/video_compress.dart';
 
 import '../widgets/primary_button.dart';
 import '../constants.dart';
@@ -22,34 +23,36 @@ class _VideoPickerScreenState extends State<VideoPickerScreen> {
   String? _path;
   String? _name;
   Uint8List? _bytes;
-  static const int _maxSize = 5 * 1024 * 1024;
+
+  /// Compresses a video file and returns information about the compressed file.
+  /// [path] is the path of the original video file.
+  Future<MediaInfo?> compressVideo(String path) async {
+    // Ensure the previous compression cache is cleared.
+    await VideoCompress.deleteAllCache();
+
+    final MediaInfo? mediaInfo = await VideoCompress.compressVideo(
+      path,
+      quality: VideoQuality.MediumQuality, // You can choose from Low, Medium, Default, High
+      deleteOrigin: false, // Set to true if you want to delete the original file
+    );
+    print("Compressed video available at: ${mediaInfo?.path}");
+    return mediaInfo;
+  }
 
   Future<void> _pickVideo() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.video,
-      withData: true,
     );
     if (!mounted) return;
     if (result != null && result.files.single.path != null) {
-      final file = result.files.single;
-      if (file.size > _maxSize) {
-        if (mounted) {
-          await showDialog<void>(
-            context: context,
-            builder: (context) => const AlertDialog(
-              content: Text(
-                'The selected file is too large (max 5MB). Please choose a smaller file.',
-              ),
-            ),
-          );
-        }
-        return;
+      final compressedVideo = await compressVideo(result.files.single.path!);
+      if (compressedVideo != null) {
+        setState(() {
+          _path = compressedVideo.path;
+          _name = compressedVideo.title;
+          _bytes = compressedVideo.file?.readAsBytesSync();
+        });
       }
-      setState(() {
-        _path = file.path!;
-        _name = file.name;
-        _bytes = file.bytes;
-      });
     }
   }
 
@@ -57,20 +60,6 @@ class _VideoPickerScreenState extends State<VideoPickerScreen> {
     if (_bytes == null || _path == null) return;
     final provider = Provider.of<ContentProvider>(context, listen: false);
     provider.setVideoPath(_path!);
-
-    if (_bytes!.length > _maxSize) {
-      if (mounted) {
-        await showDialog<void>(
-          context: context,
-          builder: (context) => const AlertDialog(
-            content: Text(
-              'The selected file is too large (max 5MB). Please choose a smaller file.',
-            ),
-          ),
-        );
-      }
-      return;
-    }
 
     // TODO: show loading indicator while uploading
 
