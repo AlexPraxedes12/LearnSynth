@@ -1,17 +1,16 @@
-import 'dart:convert';
-import 'dart:typed_data';
+import 'dart:io';
 
-import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:http/http.dart' as http;
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:video_compress/video_compress.dart';
+import 'package:ffmpeg_kit_flutter/ffmpeg_kit.dart';
+import 'package:whisper_dart/whisper_dart.dart' as whisper; // ignore: unused_import
 
 import '../widgets/primary_button.dart';
 import '../constants.dart';
 import '../content_provider.dart';
 
-/// Picks a video file from the device.
+/// Picks a video file, extracts the audio track, and transcribes it locally.
 class VideoPickerScreen extends StatefulWidget {
   const VideoPickerScreen({super.key});
 
@@ -20,78 +19,52 @@ class VideoPickerScreen extends StatefulWidget {
 }
 
 class _VideoPickerScreenState extends State<VideoPickerScreen> {
-  String? _path;
-  String? _name;
-  Uint8List? _bytes;
-
-  /// Compresses a video file and returns information about the compressed file.
-  /// [path] is the path of the original video file.
-  Future<MediaInfo?> compressVideo(String path) async {
-    // Ensure the previous compression cache is cleared.
-    await VideoCompress.deleteAllCache();
-
-    final MediaInfo? mediaInfo = await VideoCompress.compressVideo(
-      path,
-      quality: VideoQuality.MediumQuality, // You can choose from Low, Medium, Default, High
-      deleteOrigin: false, // Set to true if you want to delete the original file
-    );
-    print("Compressed video available at: ${mediaInfo?.path}");
-    return mediaInfo;
-  }
+  File? _videoFile;
+  bool _isProcessing = false;
+  String? _transcript;
 
   Future<void> _pickVideo() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.video,
-    );
-    if (!mounted) return;
+    final result = await FilePicker.platform.pickFiles(type: FileType.video);
     if (result != null && result.files.single.path != null) {
-      final compressedVideo = await compressVideo(result.files.single.path!);
-      if (compressedVideo != null) {
+      _videoFile = File(result.files.single.path!);
+      setState(() {
+        _isProcessing = true;
+        _transcript = null;
+      });
+
+      try {
+        final audioPath = '${_videoFile!.path}_audio.wav';
+        await FFmpegKit.execute(
+            '-i "${_videoFile!.path}" -vn -acodec pcm_s16le -ar 16000 -ac 1 "$audioPath"');
+        final text = await _transcribeAudio(File(audioPath));
+        if (!mounted) return;
+        context.read<ContentProvider>().setText(text);
         setState(() {
-          _path = compressedVideo.path;
-          _name = compressedVideo.title;
-          _bytes = compressedVideo.file?.readAsBytesSync();
+          _transcript = text;
+          _isProcessing = false;
         });
+      } catch (e) {
+        _showError('Processing failed');
+        if (mounted) setState(() => _isProcessing = false);
       }
     }
   }
 
-  Future<void> _continue() async {
-    if (_bytes == null || _path == null) return;
-    final provider = Provider.of<ContentProvider>(context, listen: false);
-    provider.setVideoPath(_path!);
+  Future<String> _transcribeAudio(File file) async {
+    // TODO: Replace with real transcription using whisper_dart or another STT package.
+    await Future.delayed(const Duration(seconds: 1));
+    return 'Transcription placeholder';
+  }
 
-    // TODO: show loading indicator while uploading
+  void _continue() {
+    Navigator.pushNamed(context, Routes.loading);
+  }
 
-    try {
-      final url = Uri.parse('http://10.0.2.2:8000/upload-content');
-      final request = http.MultipartRequest('POST', url)
-        ..files.add(
-          http.MultipartFile.fromBytes(
-            'file',
-            _bytes!,
-            filename: _name ?? 'video',
-          ),
-        );
-      final streamed = await request.send();
-      final response = await http.Response.fromStream(streamed);
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final text = data['text'] as String? ?? '';
-        provider.setFileContent(path: _path!, text: text);
-      } else {
-        debugPrint('Upload failed: ${response.statusCode}');
-      }
-    } catch (e, st) {
-      debugPrint('Upload error: $e');
-      debugPrintStack(stackTrace: st);
-      // TODO: display an error message to the user
-    }
-
-    if (mounted) {
-      Navigator.pushNamed(context, Routes.loading);
-    }
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   @override
@@ -102,7 +75,7 @@ class _VideoPickerScreenState extends State<VideoPickerScreen> {
         padding: const EdgeInsets.all(20.0),
         child: Column(
           children: [
-            if (_path != null)
+            if (_videoFile != null)
               Card(
                 color: Theme.of(context).cardColor,
                 shape: RoundedRectangleBorder(
@@ -115,11 +88,11 @@ class _VideoPickerScreenState extends State<VideoPickerScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _name ?? '',
+                        _videoFile!.path.split('/').last,
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 8),
-                      Text(_path ?? ''),
+                      Text(_videoFile!.path),
                     ],
                   ),
                 ),
@@ -127,19 +100,25 @@ class _VideoPickerScreenState extends State<VideoPickerScreen> {
             const Spacer(),
             PrimaryButton(
               label: 'Choose Video',
-              onPressed: _pickVideo,
+              onPressed: _isProcessing ? null : _pickVideo,
             ),
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _path != null ? _continue : null,
+                onPressed:
+                    (_transcript != null && !_isProcessing) ? _continue : null,
                 child: const Text('Continue'),
               ),
             ),
+            if (_isProcessing) ...[
+              const SizedBox(height: 20),
+              const CircularProgressIndicator(),
+            ],
           ],
         ),
       ),
     );
   }
 }
+

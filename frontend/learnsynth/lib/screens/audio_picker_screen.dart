@@ -1,18 +1,18 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
+import 'package:ffmpeg_kit_flutter/ffmpeg_kit.dart';
+import 'package:whisper_dart/whisper_dart.dart' as whisper; // ignore: unused_import
 
 import '../constants.dart';
 import '../content_provider.dart';
 import '../widgets/primary_button.dart';
 
-/// Screen that lets the user pick an audio file, transcribe it locally and
-/// upload the resulting text for analysis.
+/// Screen that lets the user pick an audio file, convert and transcribe it
+/// locally for analysis.
 class AudioPickerScreen extends StatefulWidget {
   const AudioPickerScreen({super.key});
 
@@ -23,6 +23,7 @@ class AudioPickerScreen extends StatefulWidget {
 class _AudioPickerScreenState extends State<AudioPickerScreen> {
   File? _selectedFile;
   bool _isProcessing = false;
+  String? _transcript;
 
   Future<void> _pickAudio() async {
     try {
@@ -40,60 +41,44 @@ class _AudioPickerScreenState extends State<AudioPickerScreen> {
       );
       if (result != null && result.files.single.path != null) {
         _selectedFile = File(result.files.single.path!);
-        setState(() {});
+        setState(() {
+          _isProcessing = true;
+          _transcript = null;
+        });
+
+        final wavFile = await _ensureWav(_selectedFile!);
+        final transcription = await _transcribeAudio(wavFile);
+        if (!mounted) return;
+        context.read<ContentProvider>().setText(transcription);
+        setState(() {
+          _transcript = transcription;
+          _isProcessing = false;
+        });
       }
     } catch (e) {
       _showError(e.toString());
+      if (mounted) setState(() => _isProcessing = false);
     }
   }
 
+  Future<File> _ensureWav(File file) async {
+    final path = file.path;
+    if (path.toLowerCase().endsWith('.wav')) {
+      return file;
+    }
+    final outPath = '${path}_converted.wav';
+    await FFmpegKit.execute('-i "$path" -ac 1 -ar 16000 "$outPath"');
+    return File(outPath);
+  }
+
   Future<String> _transcribeAudio(File file) async {
-    // TODO: Replace with real transcription using whisper_dart or platform channel.
+    // TODO: Replace with real transcription using whisper_dart or another STT package.
     await Future.delayed(const Duration(seconds: 1));
     return 'Transcription placeholder';
   }
 
-  Future<void> _continue() async {
-    if (_selectedFile == null) return;
-    setState(() => _isProcessing = true);
-    try {
-      final transcription = await _transcribeAudio(_selectedFile!);
-      context
-          .read<ContentProvider>()
-          .setFileContent(path: _selectedFile!.path, text: transcription);
-
-      final uploadRes = await http.post(
-        Uri.parse('http://10.0.2.2:8000/upload-content'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'text': transcription}),
-      );
-      if (uploadRes.statusCode != 200) {
-        _showError('Upload failed: ${uploadRes.statusCode}');
-        return;
-      }
-
-      final analyzeRes = await http.post(
-        Uri.parse('http://10.0.2.2:8000/analyze'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'text': transcription}),
-      );
-
-      if (analyzeRes.statusCode == 200) {
-        final data = jsonDecode(analyzeRes.body) as Map<String, dynamic>;
-        final summary = data['summary'] as String? ?? '';
-        final topics = List<String>.from(data['topics'] as List? ?? []);
-        context.read<ContentProvider>().setAnalysis(summary, topics);
-        if (mounted) {
-          Navigator.pushNamed(context, Routes.loading);
-        }
-      } else {
-        _showError('Analysis failed: ${analyzeRes.statusCode}');
-      }
-    } catch (e) {
-      _showError('Processing failed');
-    } finally {
-      if (mounted) setState(() => _isProcessing = false);
-    }
+  void _continue() {
+    Navigator.pushNamed(context, Routes.loading);
   }
 
   void _showError(String message) {
@@ -120,7 +105,7 @@ class _AudioPickerScreenState extends State<AudioPickerScreen> {
             PrimaryButton(
               label: 'Continue',
               onPressed:
-                  (_selectedFile != null && !_isProcessing) ? _continue : null,
+                  (_transcript != null && !_isProcessing) ? _continue : null,
             ),
             if (_isProcessing) ...[
               const SizedBox(height: 20),
