@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 
 /// Simple model representing a piece of study content. Either [text]
@@ -48,6 +50,15 @@ class ContentProvider extends ChangeNotifier {
     filePath = path;
     text = null;
     _saved.add(ContentItem(filePath: path));
+    notifyListeners();
+  }
+
+  /// Store an audio [file]. Useful when a recording or picker returns
+  /// a [File] object instead of just a path.
+  void setAudioFile(File file) {
+    filePath = file.path;
+    text = null;
+    _saved.add(ContentItem(filePath: file.path));
     notifyListeners();
   }
 
