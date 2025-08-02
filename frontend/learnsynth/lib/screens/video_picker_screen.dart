@@ -23,27 +23,46 @@ class _VideoPickerScreenState extends State<VideoPickerScreen> {
 
   Future<void> _pickVideo() async {
     final result = await FilePicker.platform.pickFiles(type: FileType.video);
-    if (result != null && result.files.single.path != null) {
-      _videoFile = File(result.files.single.path!);
-      setState(() {
-        _isProcessing = true;
-        _transcript = null;
-      });
+    if (result == null || result.files.single.path == null) {
+      _showError('No file selected.');
+      return;
+    }
+    _videoFile = File(result.files.single.path!);
+    setState(() {
+      _isProcessing = true;
+      _transcript = null;
+    });
 
-      try {
-        final service = TranscriptionService();
-        final audioFile = await service.extractAudioFromVideo(_videoFile!);
-        final text = await service.transcribeAudio(audioFile);
-        if (!mounted) return;
-        context.read<ContentProvider>().setText(text);
-        setState(() {
-          _transcript = text;
-          _isProcessing = false;
-        });
-      } catch (e) {
-        _showError('Processing failed');
+    try {
+      final service = TranscriptionService();
+      final audioResult = await service.extractAudioFromVideo(_videoFile!);
+      if (!audioResult.isSuccess) {
+        _showError('Audio extraction failed');
         if (mounted) setState(() => _isProcessing = false);
+        return;
       }
+      final audioFile = audioResult.data!;
+      final textResult = await service.transcribeAudio(audioFile);
+      if (!textResult.isSuccess) {
+        _showError('Transcription failed');
+        if (mounted) setState(() => _isProcessing = false);
+        return;
+      }
+      final text = textResult.data ?? '';
+      if (text.trim().isEmpty) {
+        _showError('No text produced.');
+        if (mounted) setState(() => _isProcessing = false);
+        return;
+      }
+      if (!mounted) return;
+      context.read<ContentProvider>().setText(text);
+      setState(() {
+        _transcript = text;
+        _isProcessing = false;
+      });
+    } catch (e) {
+      _showError('Processing failed');
+      if (mounted) setState(() => _isProcessing = false);
     }
   }
 
