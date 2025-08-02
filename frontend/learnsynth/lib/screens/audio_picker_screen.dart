@@ -28,10 +28,9 @@ class _AudioPickerScreenState extends State<AudioPickerScreen> {
   Future<void> _pickAudio() async {
     try {
       if (Platform.isAndroid) {
-        final status = await Permission.storage.request();
-        if (!status.isGranted) {
-          _showError('Storage permission denied');
-          return;
+        if (await Permission.audio.isDenied &&
+            await Permission.storage.isDenied) {
+          await [Permission.audio, Permission.storage].request();
         }
       }
 
@@ -49,8 +48,9 @@ class _AudioPickerScreenState extends State<AudioPickerScreen> {
         _transcript = null;
       });
 
-      final ffmpegResult =
-          await TranscriptionService().transcribeAudio(_selectedFile!);
+      final ffmpegResult = await TranscriptionService().transcribeAudio(
+        _selectedFile!,
+      );
       if (!ffmpegResult.isSuccess) {
         _showError('Transcription failed');
         if (mounted) setState(() => _isProcessing = false);
@@ -74,16 +74,15 @@ class _AudioPickerScreenState extends State<AudioPickerScreen> {
     }
   }
 
-
   void _continue() {
     Navigator.pushNamed(context, Routes.loading);
   }
 
   void _showError(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -102,8 +101,9 @@ class _AudioPickerScreenState extends State<AudioPickerScreen> {
             const SizedBox(height: 16),
             PrimaryButton(
               label: 'Continue',
-              onPressed:
-                  (_transcript != null && !_isProcessing) ? _continue : null,
+              onPressed: (_transcript != null && !_isProcessing)
+                  ? _continue
+                  : null,
             ),
             if (_isProcessing) ...[
               const SizedBox(height: 20),
@@ -115,4 +115,3 @@ class _AudioPickerScreenState extends State<AudioPickerScreen> {
     );
   }
 }
-
