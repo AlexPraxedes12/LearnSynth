@@ -1,11 +1,8 @@
 import 'dart:convert';
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
-import 'package:video_compress/video_compress.dart';
 
 import '../widgets/primary_button.dart';
 import '../constants.dart';
@@ -22,21 +19,14 @@ class VideoPickerScreen extends StatefulWidget {
 class _VideoPickerScreenState extends State<VideoPickerScreen> {
   String? _path;
   String? _name;
-  Uint8List? _bytes;
+  bool _isLoading = false;
 
-  /// Compresses a video file and returns information about the compressed file.
-  /// [path] is the path of the original video file.
-  Future<MediaInfo?> compressVideo(String path) async {
-    // Ensure the previous compression cache is cleared.
-    await VideoCompress.deleteAllCache();
-
-    final MediaInfo? mediaInfo = await VideoCompress.compressVideo(
-      path,
-      quality: VideoQuality.MediumQuality, // You can choose from Low, Medium, Default, High
-      deleteOrigin: false, // Set to true if you want to delete the original file
-    );
-    print("Compressed video available at: ${mediaInfo?.path}");
-    return mediaInfo;
+  /// Placeholder method for local video transcription.
+  /// In a real application, integrate a proper transcription library.
+  Future<String> _transcribeVideo(String path) async {
+    // TODO: Implement actual on-device transcription.
+    // For now, return a mocked transcript so the flow can continue.
+    return 'Transcribed text from video';
   }
 
   Future<void> _pickVideo() async {
@@ -45,52 +35,69 @@ class _VideoPickerScreenState extends State<VideoPickerScreen> {
     );
     if (!mounted) return;
     if (result != null && result.files.single.path != null) {
-      final compressedVideo = await compressVideo(result.files.single.path!);
-      if (compressedVideo != null) {
-        setState(() {
-          _path = compressedVideo.path;
-          _name = compressedVideo.title;
-          _bytes = compressedVideo.file?.readAsBytesSync();
-        });
-      }
+      setState(() {
+        _path = result.files.single.path;
+        _name = result.files.single.name;
+      });
     }
   }
 
   Future<void> _continue() async {
-    if (_bytes == null || _path == null) return;
+    if (_path == null) return;
     final provider = Provider.of<ContentProvider>(context, listen: false);
     provider.setVideoPath(_path!);
-
-    // TODO: show loading indicator while uploading
+    setState(() => _isLoading = true);
 
     try {
-      final url = Uri.parse('http://10.0.2.2:8000/upload-content');
-      final request = http.MultipartRequest('POST', url)
+      // 1. Transcribe the video locally.
+      var transcript = await _transcribeVideo(_path!);
+
+      // 2. Upload the transcript text to the backend.
+      final uploadUrl = Uri.parse('http://10.0.2.2:8000/upload-content');
+      final uploadRequest = http.MultipartRequest('POST', uploadUrl)
         ..files.add(
-          http.MultipartFile.fromBytes(
+          http.MultipartFile.fromString(
             'file',
-            _bytes!,
-            filename: _name ?? 'video',
+            transcript,
+            filename: _name ?? 'transcript.txt',
           ),
         );
-      final streamed = await request.send();
-      final response = await http.Response.fromStream(streamed);
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final text = data['text'] as String? ?? '';
-        provider.setFileContent(path: _path!, text: text);
+      final uploadStreamed = await uploadRequest.send();
+      final uploadResponse = await http.Response.fromStream(uploadStreamed);
+      if (uploadResponse.statusCode == 200) {
+        final data = jsonDecode(uploadResponse.body) as Map<String, dynamic>;
+        transcript = data['text'] as String? ?? transcript;
       } else {
-        debugPrint('Upload failed: ${response.statusCode}');
+        throw Exception('Upload failed: ${uploadResponse.statusCode}');
       }
-    } catch (e, st) {
-      debugPrint('Upload error: $e');
-      debugPrintStack(stackTrace: st);
-      // TODO: display an error message to the user
-    }
 
-    if (mounted) {
-      Navigator.pushNamed(context, Routes.loading);
+      provider.setFileContent(path: _path!, text: transcript);
+
+      // 3. Analyze the transcript.
+      final analyzeUrl = Uri.parse('http://10.0.2.2:8000/analyze');
+      final analyzeResponse = await http.post(
+        analyzeUrl,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'text': transcript}),
+      );
+      if (analyzeResponse.statusCode == 200) {
+        final data = jsonDecode(analyzeResponse.body) as Map<String, dynamic>;
+        final summary = data['summary'] as String? ?? '';
+        final topics = List<String>.from(data['topics'] as List? ?? []);
+        provider.setAnalysis(summary, topics);
+        if (mounted) {
+          Navigator.pushNamed(context, Routes.loading);
+        }
+      } else {
+        throw Exception('Analysis failed: ${analyzeResponse.statusCode}');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -126,15 +133,21 @@ class _VideoPickerScreenState extends State<VideoPickerScreen> {
               ),
             const Spacer(),
             PrimaryButton(
-              label: 'Choose Video',
-              onPressed: _pickVideo,
+              label: 'Select Video',
+              onPressed: _isLoading ? null : _pickVideo,
             ),
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _path != null ? _continue : null,
-                child: const Text('Continue'),
+                onPressed: _path != null && !_isLoading ? _continue : null,
+                child: _isLoading
+                    ? const SizedBox(
+                        height: 16,
+                        width: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Continue'),
               ),
             ),
           ],
