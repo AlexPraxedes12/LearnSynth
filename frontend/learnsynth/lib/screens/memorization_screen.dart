@@ -37,7 +37,7 @@ class _MemorizationScreenState extends State<MemorizationScreen> {
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'text': provider.text, 'mode': 'memorization'}),
+        body: jsonEncode({'text': provider.content, 'mode': 'memorization'}),
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;

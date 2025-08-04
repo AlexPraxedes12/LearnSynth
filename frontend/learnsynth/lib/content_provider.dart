@@ -2,19 +2,19 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 
-/// Simple model representing a piece of study content. Either [text]
+/// Simple model representing a piece of study content. Either [content]
 /// or [filePath] will be provided depending on how the content was
 /// added.
 class ContentItem {
-  final String? text;
+  final String? content;
   final String? filePath;
-  const ContentItem({this.text, this.filePath});
+  const ContentItem({this.content, this.filePath});
 }
 
 /// Stores the content added by the user so it can be accessed across screens.
 class ContentProvider extends ChangeNotifier {
-  /// Cleaned or processed text used throughout the study flow.
-  String? text;
+  /// Cleaned or processed content used throughout the study flow.
+  String? content;
 
   /// Raw text extracted from uploaded files before any processing.
   String? rawText;
@@ -31,24 +31,24 @@ class ContentProvider extends ChangeNotifier {
   /// List of all content pieces added by the user.
   List<ContentItem> get savedContent => List.unmodifiable(_saved);
 
-  void setText(String value) {
-    text = value;
+  void setContent(String value) {
+    content = value;
     rawText = value;
     filePath = null;
-    _saved.add(ContentItem(text: value));
+    _saved.add(ContentItem(content: value));
     notifyListeners();
   }
 
   void setPdfPath(String path) {
     filePath = path;
-    text = null;
+    content = null;
     _saved.add(ContentItem(filePath: path));
     notifyListeners();
   }
 
   void setAudioPath(String path) {
     filePath = path;
-    text = null;
+    content = null;
     _saved.add(ContentItem(filePath: path));
     notifyListeners();
   }
@@ -57,26 +57,26 @@ class ContentProvider extends ChangeNotifier {
   /// a [File] object instead of just a path.
   void setAudioFile(File file) {
     filePath = file.path;
-    text = null;
+    content = null;
     _saved.add(ContentItem(filePath: file.path));
     notifyListeners();
   }
 
   void setVideoPath(String path) {
     filePath = path;
-    text = null;
+    content = null;
     _saved.add(ContentItem(filePath: path));
     notifyListeners();
   }
 
-  /// Store both [path] and [text] for the same content item.
+  /// Store both [path] and [content] for the same content item.
   /// The raw text is kept in [rawText] so it can be processed later.
-  void setFileContent({required String path, required String text}) {
-    rawText = text;
-    this.text = text;
+  void setFileContent({required String path, required String content}) {
+    rawText = content;
+    this.content = content;
     filePath = path;
     final index = _saved.lastIndexWhere((item) => item.filePath == path);
-    final item = ContentItem(text: text, filePath: path);
+    final item = ContentItem(content: content, filePath: path);
     if (index != -1) {
       _saved[index] = item;
     } else {

@@ -63,7 +63,7 @@ class _AudioPickerScreenState extends State<AudioPickerScreen> {
         return;
       }
       if (!mounted) return;
-      context.read<ContentProvider>().setText(transcription);
+      context.read<ContentProvider>().setContent(transcription);
       setState(() {
         _transcript = transcription;
         _isProcessing = false;

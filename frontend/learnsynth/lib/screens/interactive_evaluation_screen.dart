@@ -39,7 +39,8 @@ class _InteractiveEvaluationScreenState
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'text': provider.text, 'mode': 'interactive_evaluation'}),
+        body: jsonEncode(
+            {'text': provider.content, 'mode': 'interactive_evaluation'}),
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;

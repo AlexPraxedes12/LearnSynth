@@ -37,7 +37,8 @@ class _DeepUnderstandingScreenState extends State<DeepUnderstandingScreen> {
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'text': provider.text, 'mode': 'deep_understanding'}),
+        body:
+            jsonEncode({'text': provider.content, 'mode': 'deep_understanding'}),
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
