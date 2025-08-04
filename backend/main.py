@@ -58,15 +58,34 @@ async def upload_content(file: UploadFile = File(...)):
 def analyze_text(text: str = Body(..., embed=True)):
     """Return summary and topics for the given text using the LLM."""
     prompt = (
-        "Analyze the following text and respond in JSON with keys 'summary' and "
-        "'topics' (list of strings):\n\n" + text
+        "Analyze the following text and respond only in JSON with the keys:\n"
+        "{\n"
+        '  "summary": str,\n'
+        '  "concept_map": [str, ...],\n'
+        '  "flashcards": [{"term": str, "definition": str}],\n'
+        '  "quiz": [{"question": str, "options": [str, ...], "answer": str}],\n'
+        '  "spaced_repetition": [str, ...],\n'
+        '  "progress": {"completion": float, "masteryLevel": str}\n'
+        "}\n"
+        "Include key points in your analysis.\n\n" + text
     )
     try:
         result = ask_llm(prompt)
         try:
-            return json.loads(result)
+            data = json.loads(result)
         except Exception:
-            return {"summary": result, "topics": []}
+            data = {"summary": result}
+
+        return {
+            "summary": data.get("summary", ""),
+            "concept_map": data.get("concept_map")
+            or data.get("conceptMap", []),
+            "flashcards": data.get("flashcards", []),
+            "quiz": data.get("quiz") or data.get("quizQuestions", []),
+            "spaced_repetition": data.get("spaced_repetition")
+            or data.get("spacedRepetition", []),
+            "progress": data.get("progress", {"completion": 0.0, "masteryLevel": ""}),
+        }
     except Exception as exc:
         logger.exception("Analysis failed: %s", exc)
         raise HTTPException(status_code=500, detail="Internal server error")
