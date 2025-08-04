@@ -6,9 +6,10 @@ import 'package:provider/provider.dart';
 import '../widgets/primary_button.dart';
 import '../constants.dart';
 import '../content_provider.dart';
-import '../services/transcription_service.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
-/// Picks a video file, extracts the audio track, and transcribes it locally.
+/// Picks a video file and sends it to the backend for transcription.
 class VideoPickerScreen extends StatefulWidget {
   const VideoPickerScreen({super.key});
 
@@ -34,28 +35,28 @@ class _VideoPickerScreenState extends State<VideoPickerScreen> {
     });
 
     try {
-      final service = TranscriptionService();
-      final audioResult = await service.extractAudioFromVideo(_videoFile!);
-      if (!audioResult.isSuccess) {
-        _showError('Audio extraction failed');
+      final uri = Uri.parse('http://10.0.2.2:8000/upload-content');
+      final request = http.MultipartRequest('POST', uri)
+        ..files.add(await http.MultipartFile.fromPath('file', _videoFile!.path));
+      final response = await request.send();
+      final body = await response.stream.bytesToString();
+      if (response.statusCode != 200) {
+        _showError('Processing failed');
         if (mounted) setState(() => _isProcessing = false);
         return;
       }
-      final audioFile = audioResult.data!;
-      final textResult = await service.transcribeAudio(audioFile);
-      if (!textResult.isSuccess) {
-        _showError('Transcription failed');
-        if (mounted) setState(() => _isProcessing = false);
-        return;
-      }
-      final text = textResult.data ?? '';
+      final data = jsonDecode(body) as Map<String, dynamic>;
+      final text = (data['text'] ?? '') as String;
       if (text.trim().isEmpty) {
         _showError('No text produced.');
         if (mounted) setState(() => _isProcessing = false);
         return;
       }
       if (!mounted) return;
-      context.read<ContentProvider>().setContent(text);
+      context.read<ContentProvider>().setFileContent(
+            path: _videoFile!.path,
+            content: text,
+          );
       setState(() {
         _transcript = text;
         _isProcessing = false;

@@ -5,14 +5,15 @@ import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 
-import '../services/transcription_service.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 import '../constants.dart';
 import '../content_provider.dart';
 import '../widgets/primary_button.dart';
 
-/// Screen that lets the user pick an audio file, convert and transcribe it
-/// locally for analysis.
+/// Screen that lets the user pick an audio file and send it to the backend for
+/// transcription.
 class AudioPickerScreen extends StatefulWidget {
   const AudioPickerScreen({super.key});
 
@@ -48,22 +49,28 @@ class _AudioPickerScreenState extends State<AudioPickerScreen> {
         _transcript = null;
       });
 
-      final ffmpegResult = await TranscriptionService().transcribeAudio(
-        _selectedFile!,
-      );
-      if (!ffmpegResult.isSuccess) {
+      final uri = Uri.parse('http://10.0.2.2:8000/upload-content');
+      final request = http.MultipartRequest('POST', uri)
+        ..files.add(await http.MultipartFile.fromPath('file', _selectedFile!.path));
+      final response = await request.send();
+      final body = await response.stream.bytesToString();
+      if (response.statusCode != 200) {
         _showError('Transcription failed');
         if (mounted) setState(() => _isProcessing = false);
         return;
       }
-      final transcription = ffmpegResult.data ?? '';
+      final data = jsonDecode(body) as Map<String, dynamic>;
+      final transcription = (data['text'] ?? '') as String;
       if (transcription.trim().isEmpty) {
         _showError('No text produced.');
         if (mounted) setState(() => _isProcessing = false);
         return;
       }
       if (!mounted) return;
-      context.read<ContentProvider>().setContent(transcription);
+      context.read<ContentProvider>().setFileContent(
+            path: _selectedFile!.path,
+            content: transcription,
+          );
       setState(() {
         _transcript = transcription;
         _isProcessing = false;
