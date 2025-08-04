@@ -38,7 +38,8 @@ class _ContextualAssociationScreenState
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'text': provider.text, 'mode': 'contextual_association'}),
+        body: jsonEncode(
+            {'text': provider.content, 'mode': 'contextual_association'}),
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;

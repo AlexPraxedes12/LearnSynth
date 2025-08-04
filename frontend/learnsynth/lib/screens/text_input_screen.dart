@@ -31,7 +31,7 @@ class _TextInputScreenState extends State<TextInputScreen> {
     final provider = Provider.of<ContentProvider>(context, listen: false);
     final text = _controller.text.trim();
     if (text.isEmpty) return;
-    provider.setText(text);
+    provider.setContent(text);
     if (mounted) {
       Navigator.pushNamed(context, Routes.loading);
     }

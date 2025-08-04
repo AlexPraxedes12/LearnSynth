@@ -39,7 +39,7 @@ class _LoadingScreenState extends State<LoadingScreen> {
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'text': provider.rawText ?? provider.text}),
+        body: jsonEncode({'text': provider.rawText ?? provider.content}),
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;

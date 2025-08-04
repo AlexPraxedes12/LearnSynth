@@ -47,7 +47,7 @@ class _PdfPickerScreenState extends State<PdfPickerScreen> {
       final extracted = PdfTextExtractor(document).extractText();
       document.dispose();
       if (!mounted) return;
-      context.read<ContentProvider>().setText(extracted);
+      context.read<ContentProvider>().setContent(extracted);
       setState(() {
         _text = extracted;
         _isProcessing = false;

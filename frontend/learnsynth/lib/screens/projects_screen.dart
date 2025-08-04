@@ -28,7 +28,7 @@ class ProjectsScreen extends StatelessWidget {
                   final item = items[index];
                   final title = item.filePath != null
                       ? item.filePath!.split(RegExp(r'[\\/]')).last
-                      : item.text?.split('\n').first.trim() ?? 'Untitled';
+                      : item.content?.split('\n').first.trim() ?? 'Untitled';
                   return Card(
                     color: AppTheme.accentGray,
                     child: ListTile(
