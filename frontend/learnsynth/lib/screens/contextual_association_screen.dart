@@ -34,19 +34,34 @@ class _ContextualAssociationScreenState
       return;
     }
     try {
-      final url = Uri.parse('http://10.0.2.2:8000/study-mode');
+      final url = Uri.parse('http://10.0.2.2:8000/analyze');
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(
-            {'text': provider.content, 'mode': 'contextual_association'}),
+        body: jsonEncode({
+          'text': provider.content,
+          'mode': 'contextual_association',
+        }),
       );
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final ex = (data['contextualExercises'] as List? ?? data['exercises'] as List? ?? [])
-            .map<Map<String, dynamic>>( (e) => Map<String, dynamic>.from(e as Map))
-            .toList();
-        provider.setContextualExercises(ex);
+        try {
+          final data = jsonDecode(response.body);
+          final list = (data['contextualExercises'] ??
+                  data['exercises'] ??
+                  data['result']?['contextualExercises'] ??
+                  data['result']?['exercises'])
+              as List?;
+          final ex = list
+                  ?.map<Map<String, dynamic>>(
+                      (e) => Map<String, dynamic>.from(e as Map))
+                  .toList() ??
+              [];
+          provider.setContextualExercises(ex);
+        } catch (_) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Invalid exercise data')),
+          );
+        }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Failed to load exercises')),
