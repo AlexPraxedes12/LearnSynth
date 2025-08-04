@@ -35,7 +35,7 @@ class _InteractiveEvaluationScreenState
       return;
     }
     try {
-      final url = Uri.parse('http://10.0.2.2:8000/study-mode');
+      final url = Uri.parse('http://10.0.2.2:8000/analyze');
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
@@ -44,10 +44,12 @@ class _InteractiveEvaluationScreenState
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final ex = (data['evaluationQuestions'] as List? ?? data['exercises'] as List? ?? [])
-            .map<Map<String, dynamic>>( (e) => Map<String, dynamic>.from(e as Map))
-            .toList();
-        provider.setEvaluationQuestions(ex);
+        final questions =
+            (data['evaluationQuestions'] as List? ?? [])
+                .map<Map<String, dynamic>>(
+                    (e) => Map<String, dynamic>.from(e as Map))
+                .toList();
+        provider.setEvaluationQuestions(questions);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Failed to load questions')),
