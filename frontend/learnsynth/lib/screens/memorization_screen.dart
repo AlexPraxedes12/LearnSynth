@@ -33,19 +33,29 @@ class _MemorizationScreenState extends State<MemorizationScreen> {
       return;
     }
     try {
-      final url = Uri.parse('http://10.0.2.2:8000/study-mode');
+      final url = Uri.parse('http://10.0.2.2:8000/analyze');
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'text': provider.content, 'mode': 'memorization'}),
       );
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final cards = (data['flashcards'] as List? ?? data['cards'] as List? ?? [])
-            .map<Map<String, String>>(
-                (e) => Map<String, String>.from(e as Map))
-            .toList();
-        provider.setFlashcards(cards);
+        try {
+          final data = jsonDecode(response.body);
+          final list =
+              (data['flashcards'] ?? data['cards'] ?? data['result']?['flashcards'] ?? data['result']?['cards'])
+                  as List?;
+          final cards = list
+                  ?.map<Map<String, String>>(
+                      (e) => Map<String, String>.from(e as Map))
+                  .toList() ??
+              [];
+          provider.setFlashcards(cards);
+        } catch (_) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Invalid flashcard data')),
+          );
+        }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Failed to load flashcards')),
