@@ -1,72 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
 import '../widgets/primary_button.dart';
 import '../constants.dart';
-import 'package:provider/provider.dart';
 import '../content_provider.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 
 /// Provides a deep understanding session. Users can listen to an
 /// audio explanation and view a concept map. Upon completion, they
 /// navigate to the progress screen using a named route (not
 /// replacement) to preserve navigation history.
-class DeepUnderstandingScreen extends StatefulWidget {
+class DeepUnderstandingScreen extends StatelessWidget {
   const DeepUnderstandingScreen({super.key});
-
-  @override
-  State<DeepUnderstandingScreen> createState() => _DeepUnderstandingScreenState();
-}
-
-class _DeepUnderstandingScreenState extends State<DeepUnderstandingScreen> {
-  bool _loading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _fetch();
-  }
-
-  Future<void> _fetch() async {
-    final provider = Provider.of<ContentProvider>(context, listen: false);
-    if (provider.conceptMap != null) {
-      setState(() => _loading = false);
-      return;
-    }
-    try {
-      final url = Uri.parse('http://10.0.2.2:8000/analyze');
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'text': provider.content, 'mode': 'deep_understanding'}),
-      );
-      if (response.statusCode == 200) {
-        try {
-          final data = jsonDecode(response.body) as Map<String, dynamic>;
-          final mapData = data['conceptMap'] ??
-              data['concept_map'] ??
-              data['result']?['conceptMap'] ??
-              data['result']?['concept_map'];
-          final map = mapData is Map
-              ? Map<String, dynamic>.from(mapData as Map)
-              : Map<String, dynamic>.from(data);
-          provider.setConceptMap(map);
-        } catch (_) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Invalid concept map data')),
-          );
-        }
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to load concept map')),
-        );
-      }
-    } catch (_) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Network error')),
-      );
-    }
-    if (mounted) setState(() => _loading = false);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -75,33 +19,32 @@ class _DeepUnderstandingScreenState extends State<DeepUnderstandingScreen> {
       appBar: AppBar(title: const Text('Deep Understanding')),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
-        child: _loading
-            ? const Center(child: CircularProgressIndicator())
-            : Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (map != null)
-                    ...List.generate(
-                      (map['links'] as List? ?? []).length,
-                      (i) {
-                        final link = (map['links'] as List)[i] as Map<String, dynamic>;
-                        final src = link['source'];
-                        final tgt = link['target'];
-                        final lbl = link['label'] ?? '';
-                        return Text('$src --$lbl--> $tgt');
-                      },
-                    )
-                  else
-                    const Text('No concept map'),
-                  const SizedBox(height: 16),
-                  PrimaryButton(
-                    label: 'Complete Session',
-                    onPressed: () =>
-                        Navigator.pushNamed(context, Routes.progress),
-                  ),
-                ],
-              ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (map != null)
+              ...List.generate(
+                (map['links'] as List? ?? []).length,
+                (i) {
+                  final link = (map['links'] as List)[i] as Map<String, dynamic>;
+                  final src = link['source'];
+                  final tgt = link['target'];
+                  final lbl = link['label'] ?? '';
+                  return Text('$src --$lbl--> $tgt');
+                },
+              )
+            else
+              const Text('No concept map'),
+            const SizedBox(height: 16),
+            PrimaryButton(
+              label: 'Complete Session',
+              onPressed: () =>
+                  Navigator.pushNamed(context, Routes.progress),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
+
