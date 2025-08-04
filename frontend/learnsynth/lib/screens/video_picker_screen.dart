@@ -55,7 +55,10 @@ class _VideoPickerScreenState extends State<VideoPickerScreen> {
         return;
       }
       if (!mounted) return;
-      context.read<ContentProvider>().setContent(text);
+      context.read<ContentProvider>().setFileContent(
+        path: _videoFile!.path,
+        content: text,
+      );
       setState(() {
         _transcript = text;
         _isProcessing = false;
