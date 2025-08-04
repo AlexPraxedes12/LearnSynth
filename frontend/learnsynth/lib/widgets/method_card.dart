@@ -8,6 +8,7 @@ class MethodCard extends StatelessWidget {
   final IconData icon;
   final String title;
   final String description;
+  final String? summary;
   final VoidCallback onTap;
 
   const MethodCard({
@@ -15,6 +16,7 @@ class MethodCard extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.description,
+    this.summary,
     required this.onTap,
   });
 
@@ -44,6 +46,13 @@ class MethodCard extends StatelessWidget {
                       description,
                       style: const TextStyle(color: Colors.white70),
                     ),
+                    if (summary != null && summary!.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        summary!,
+                        style: const TextStyle(color: Colors.white60, fontSize: 12),
+                      ),
+                    ],
                   ],
                 ),
               ),
