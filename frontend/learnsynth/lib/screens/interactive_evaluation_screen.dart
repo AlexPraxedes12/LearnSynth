@@ -5,6 +5,7 @@ import '../widgets/quiz_question_card.dart';
 import '../widgets/primary_button.dart';
 import '../constants.dart';
 import '../content_provider.dart';
+import '../widgets/key_value_card.dart';
 
 /// Presents an interactive quiz. After submitting answers, the user can
 /// complete the session which navigates to the progress screen using
@@ -35,20 +36,21 @@ class InteractiveEvaluationScreen extends StatelessWidget {
                         correctIndex: ex['correctIndex'] as int? ?? 0,
                       );
                     }
-                    return Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Text(
-                            ex['question']?.toString() ?? ex.toString()),
-                      ),
-                    );
+                    return KeyValueCard(data: ex);
                   },
                 ),
               )
             else
-              const Text('No questions generated'),
+              const Center(child: Text('No questions generated.')),
             const SizedBox(height: 16),
-            PrimaryButton(label: 'Submit', onPressed: () {}),
+            PrimaryButton(
+              label: 'Submit',
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Not implemented')),
+                );
+              },
+            ),
             const SizedBox(height: 16),
             PrimaryButton(
               label: 'Complete Session',

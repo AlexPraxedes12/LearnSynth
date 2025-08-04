@@ -4,17 +4,22 @@ import 'package:provider/provider.dart';
 import '../widgets/primary_button.dart';
 import '../constants.dart';
 import '../content_provider.dart';
+import '../widgets/key_value_card.dart';
 
 /// Provides a deep understanding session. Users can listen to an
 /// audio explanation and view a concept map. Upon completion, they
 /// navigate to the progress screen using a named route (not
+
 /// replacement) to preserve navigation history.
 class DeepUnderstandingScreen extends StatelessWidget {
   const DeepUnderstandingScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final map = context.watch<ContentProvider>().conceptMap;
+    final provider = context.watch<ContentProvider>();
+    final conceptMap = provider.conceptMap;
+    final links = (conceptMap?['links'] as List?);
+
     return Scaffold(
       appBar: AppBar(title: const Text('Deep Understanding')),
       body: Padding(
@@ -22,24 +27,24 @@ class DeepUnderstandingScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (map != null)
-              ...List.generate(
-                (map['links'] as List? ?? []).length,
-                (i) {
-                  final link = (map['links'] as List)[i] as Map<String, dynamic>;
-                  final src = link['source'];
-                  final tgt = link['target'];
-                  final lbl = link['label'] ?? '';
-                  return Text('$src --$lbl--> $tgt');
-                },
+            if (links != null && links.isNotEmpty)
+              Expanded(
+                child: ListView.separated(
+                  itemCount: links.length,
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: 16),
+                  itemBuilder: (context, index) {
+                    final link = links[index] as Map<String, dynamic>;
+                    return KeyValueCard(data: link);
+                  },
+                ),
               )
             else
-              const Text('No concept map'),
+              const Center(child: Text('No concept map available.')),
             const SizedBox(height: 16),
             PrimaryButton(
               label: 'Complete Session',
-              onPressed: () =>
-                  Navigator.pushNamed(context, Routes.progress),
+              onPressed: () => Navigator.pushNamed(context, Routes.progress),
             ),
           ],
         ),
