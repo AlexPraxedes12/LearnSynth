@@ -2,7 +2,8 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:ffmpeg_kit_flutter_min_gpl/ffmpeg_kit.dart';
-import 'package.ffmpeg_kit_flutter_min_gpl/return_code.dart';
+import 'package:ffmpeg_kit_flutter_min_gpl/return_code.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
@@ -49,6 +50,7 @@ class TranscriptionService {
   /// recognizer. A [FfmpegResult] containing the transcription text is returned
   /// on success, otherwise the [data] is `null` and [returnCode] is non-zero.
   Future<FfmpegResult<String>> transcribeAudio(File audioFile) async {
+    final player = AudioPlayer();
     try {
       final available = await _speech.initialize();
       if (!available) {
@@ -59,19 +61,28 @@ class TranscriptionService {
       await _speech.listen(
         onResult: (SpeechRecognitionResult result) {
           if (result.finalResult) {
-            completer.complete(result.recognizedWords);
+            if (!completer.isCompleted) {
+              completer.complete(result.recognizedWords);
+            }
           }
         },
-        listenFor: const Duration(minutes: 1),
+        listenFor: const Duration(minutes: 5),
         partialResults: false,
         onDevice: true,
-        audioFilePath: audioFile.path,
       );
 
+      await player.setFilePath(audioFile.path);
+      await player.play();
+
+      // Wait for the audio to finish playing
+      await player.processingStateStream
+          .firstWhere((state) => state == ProcessingState.completed);
+
       final transcript =
-          await completer.future.timeout(const Duration(minutes: 1),
-              onTimeout: () => '');
+          await completer.future.timeout(const Duration(seconds: 5), onTimeout: () => '');
+
       await _speech.stop();
+      await player.stop();
 
       if (transcript.isEmpty) {
         return const FfmpegResult<String>(data: null, returnCode: 1);
@@ -79,7 +90,10 @@ class TranscriptionService {
       return FfmpegResult<String>(data: transcript, returnCode: 0);
     } catch (_) {
       await _speech.stop();
+      await player.stop();
       return const FfmpegResult<String>(data: null, returnCode: 1);
+    } finally {
+      await player.dispose();
     }
   }
 }
