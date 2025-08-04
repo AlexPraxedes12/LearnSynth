@@ -27,6 +27,7 @@ class ContentProvider extends ChangeNotifier {
   List<Map<String, dynamic>> contextualExercises = [];
   List<Map<String, dynamic>> evaluationQuestions = [];
   Map<String, String> activitySummaries = {};
+  Map<String, dynamic> progress = {};
   final List<ContentItem> _saved = [];
 
   /// List of all content pieces added by the user.
@@ -114,6 +115,11 @@ class ContentProvider extends ChangeNotifier {
 
   void setActivitySummaries(Map<String, String> summaries) {
     activitySummaries = summaries;
+    notifyListeners();
+  }
+
+  void setProgress(Map<String, dynamic> prog) {
+    progress = prog;
     notifyListeners();
   }
 
