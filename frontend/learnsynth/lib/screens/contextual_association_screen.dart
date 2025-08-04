@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../widgets/primary_button.dart';
 import '../constants.dart';
 import '../content_provider.dart';
+import '../widgets/key_value_card.dart';
 
 /// Encourages users to relate concepts to real‑world scenarios. Once
 /// complete, navigation continues to the progress screen using
@@ -27,18 +28,12 @@ class ContextualAssociationScreen extends StatelessWidget {
                   separatorBuilder: (_, __) => const SizedBox(height: 16),
                   itemBuilder: (context, index) {
                     final ex = exercises[index];
-                    return Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Text(
-                            ex['question']?.toString() ?? ex['prompt']?.toString() ?? ex.toString()),
-                      ),
-                    );
+                    return KeyValueCard(data: ex);
                   },
                 ),
               )
             else
-              const Text('No exercises generated'),
+              const Center(child: Text('No exercises generated.')),
             const SizedBox(height: 16),
             PrimaryButton(
               label: 'Complete Session',

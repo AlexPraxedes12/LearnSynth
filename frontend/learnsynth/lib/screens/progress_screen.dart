@@ -29,29 +29,22 @@ class ProgressScreen extends StatelessWidget {
               ),
             );
           }
+          final entries = progress.entries.toList();
           return Padding(
             padding: const EdgeInsets.all(20.0),
-            child: ListView(
-              children: [
-                ProgressSummaryCard(
-                  title: 'Completed Sessions',
-                  value: '${progress['completedSessions'] ?? 0}',
-                ),
-                const SizedBox(height: 16),
-                ProgressSummaryCard(
-                  title: 'Study Time',
-                  value: progress['studyTime']?.toString() ?? '0m',
-                ),
-                const SizedBox(height: 16),
-                ProgressSummaryCard(
-                  title: 'Methods Used',
-                  value: '${progress['methodsUsed'] ?? 0}',
-                ),
-                const SizedBox(height: 16),
-                // Navigation back to home is handled by the bottom nav bar.
-                // We show a motivational quote instead of a button.
-                const QuoteCard(quote: 'Keep up the great work!'),
-              ],
+            child: ListView.separated(
+              itemCount: entries.length + 1,
+              separatorBuilder: (context, index) => const SizedBox(height: 16),
+              itemBuilder: (context, index) {
+                if (index == entries.length) {
+                  return const QuoteCard(quote: 'Keep up the great work!');
+                }
+                final entry = entries[index];
+                return ProgressSummaryCard(
+                  title: entry.key,
+                  value: entry.value.toString(),
+                );
+              },
             ),
           );
         },
