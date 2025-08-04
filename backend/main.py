@@ -45,6 +45,13 @@ async def upload_content(file: UploadFile = File(...)):
         file.file.seek(0)
         if size > MAX_UPLOAD_SIZE:
             raise HTTPException(status_code=400, detail="File too large (max 5MB)")
+        content_type = (file.content_type or "").lower()
+        if content_type.startswith("audio/"):
+            text = generator.transcribe_audio(file)
+            return {"text": text}
+        if content_type.startswith("video/"):
+            text = generator.transcribe_video(file)
+            return {"text": text}
 
         return generator.generate_course(file)
     except HTTPException as exc:

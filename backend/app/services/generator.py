@@ -4,6 +4,7 @@ import fitz  # PyMuPDF
 import logging
 from pdf2image import convert_from_bytes
 import pytesseract
+import openai
 
 from app.utils.llm import (
     ask_llm,
@@ -40,6 +41,53 @@ def extract_text_from_pdf(pdf_data: bytes) -> str:
         logger.info("PDF contains no extractable text, applying OCR")
         text = extract_text_with_ocr(pdf_data)
     return text
+
+
+def _transcribe_media(data: bytes, filename: str) -> str:
+    """Use Whisper to transcribe audio or video data into text."""
+    try:
+        file_like = BytesIO(data)
+        file_like.name = filename or "upload"
+        # Support both old and new OpenAI Python client interfaces
+        if hasattr(openai, "Audio") and hasattr(openai.Audio, "transcriptions"):
+            response = openai.Audio.transcriptions.create(
+                model="whisper-1", file=file_like
+            )
+        else:  # Fallback for legacy clients
+            response = openai.Audio.transcribe("whisper-1", file_like)
+
+        if isinstance(response, dict):
+            return response.get("text", "")
+        return getattr(response, "text", "")
+    except Exception as exc:
+        logger.exception("Transcription failed: %s", exc)
+        raise HTTPException(status_code=500, detail="Transcription failed")
+
+
+def transcribe_audio(file: UploadFile = File(...)) -> str:
+    """Transcribe an uploaded audio file using Whisper."""
+    data = file.file.read()
+    size = len(data)
+    logger.info("Transcribing audio '%s' (%d bytes)", file.filename, size)
+
+    if size > MAX_SIZE:
+        logger.error("File too large: %d bytes", size)
+        raise HTTPException(status_code=400, detail="File too large")
+
+    return _transcribe_media(data, file.filename or "audio")
+
+
+def transcribe_video(file: UploadFile = File(...)) -> str:
+    """Transcribe an uploaded video file using Whisper."""
+    data = file.file.read()
+    size = len(data)
+    logger.info("Transcribing video '%s' (%d bytes)", file.filename, size)
+
+    if size > MAX_SIZE:
+        logger.error("File too large: %d bytes", size)
+        raise HTTPException(status_code=400, detail="File too large")
+
+    return _transcribe_media(data, file.filename or "video")
 
 
 def generate_course(file: UploadFile = File(...)):
