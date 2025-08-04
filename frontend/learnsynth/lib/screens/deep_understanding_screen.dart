@@ -33,18 +33,28 @@ class _DeepUnderstandingScreenState extends State<DeepUnderstandingScreen> {
       return;
     }
     try {
-      final url = Uri.parse('http://10.0.2.2:8000/study-mode');
+      final url = Uri.parse('http://10.0.2.2:8000/analyze');
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body:
-            jsonEncode({'text': provider.content, 'mode': 'deep_understanding'}),
+        body: jsonEncode({'text': provider.content, 'mode': 'deep_understanding'}),
       );
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final map = Map<String, dynamic>.from(
-            data['conceptMap'] ?? data);
-        provider.setConceptMap(map);
+        try {
+          final data = jsonDecode(response.body) as Map<String, dynamic>;
+          final mapData = data['conceptMap'] ??
+              data['concept_map'] ??
+              data['result']?['conceptMap'] ??
+              data['result']?['concept_map'];
+          final map = mapData is Map
+              ? Map<String, dynamic>.from(mapData as Map)
+              : Map<String, dynamic>.from(data);
+          provider.setConceptMap(map);
+        } catch (_) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Invalid concept map data')),
+          );
+        }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Failed to load concept map')),
