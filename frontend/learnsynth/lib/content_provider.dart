@@ -27,6 +27,8 @@ class ContentProvider extends ChangeNotifier {
   List<Map<String, dynamic>> contextualExercises = [];
   List<Map<String, dynamic>> evaluationQuestions = [];
   Map<String, String> activitySummaries = {};
+
+  /// Cached statistics about the user's study progress.
   Map<String, dynamic> progress = {};
   final List<ContentItem> _saved = [];
 
@@ -118,6 +120,7 @@ class ContentProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Update the locally cached [progress] data.
   void setProgress(Map<String, dynamic> prog) {
     progress = prog;
     notifyListeners();
