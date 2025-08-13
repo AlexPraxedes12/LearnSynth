@@ -32,7 +32,7 @@ class TranscriptionService {
       final session = await FFmpegKit.execute(
         '-y -i "${videoFile.path}" -vn -acodec pcm_s16le -ar 16000 -ac 1 "$outputPath"',
       );
-      final code = await session.getReturnCode() ?? 1;
+      final code = (await session.getReturnCode() ?? 1) as int;
       if (code == 0) {
         return FfmpegResult(data: File(outputPath), returnCode: code);
       }
@@ -73,11 +73,14 @@ class TranscriptionService {
       await player.play();
 
       // Wait for the audio to finish playing
-      await player.processingStateStream
-          .firstWhere((state) => state == ProcessingState.completed);
+      await player.processingStateStream.firstWhere(
+        (state) => state == ProcessingState.completed,
+      );
 
-      final transcript =
-          await completer.future.timeout(const Duration(seconds: 5), onTimeout: () => '');
+      final transcript = await completer.future.timeout(
+        const Duration(seconds: 5),
+        onTimeout: () => '',
+      );
 
       await _speech.stop();
       await player.stop();
@@ -95,4 +98,3 @@ class TranscriptionService {
     }
   }
 }
-
