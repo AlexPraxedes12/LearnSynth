@@ -1,6 +1,5 @@
 plugins {
     id("com.android.application")
-    
 }
 
 android {
@@ -21,8 +20,8 @@ android {
         applicationId = "com.example.learnsynth"
         minSdk = 24
         targetSdk = 34
-        versionCode = flutter.versionCode
-        versionName = flutter.versionName
+        versionCode = 1
+        versionName = "1.0"
     }
 
     buildTypes {
@@ -32,6 +31,6 @@ android {
     }
 }
 
-flutter {
-    source = "../.."
-}
+// Use the classic Flutter Gradle integration
+apply(from = "$flutterRoot/packages/flutter_tools/gradle/flutter.gradle")
+
