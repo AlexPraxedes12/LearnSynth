@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:ffmpeg_kit_flutter_min_gpl/ffmpeg_kit.dart';
-import 'package:ffmpeg_kit_flutter_min_gpl/return_code.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
@@ -33,9 +32,8 @@ class TranscriptionService {
       final session = await FFmpegKit.execute(
         '-y -i "${videoFile.path}" -vn -acodec pcm_s16le -ar 16000 -ac 1 "$outputPath"',
       );
-      final rc = await session.getReturnCode();
-      final code = rc?.getValue() ?? 1;
-      if (ReturnCode.isSuccess(rc)) {
+      final code = await session.getReturnCode() ?? 1;
+      if (code == 0) {
         return FfmpegResult(data: File(outputPath), returnCode: code);
       }
       return FfmpegResult<File>(data: null, returnCode: code);
