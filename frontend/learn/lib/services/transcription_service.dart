@@ -90,3 +90,9 @@ class TranscriptionService {
     }
   }
 }
+
+/// A top-level function to run the transcription in a separate isolate.
+Future<String> transcribeFileInBackground(File file) async {
+  final service = TranscriptionService();
+  return service.transcribeFile(file);
+}

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:file_selector/file_selector.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -28,7 +29,6 @@ class FileTranscribeScreen extends StatefulWidget {
 }
 
 class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
-  final TranscriptionService _transcriptionService = TranscriptionService();
   File? _file;
   bool _isProcessing = false;
   String? _transcript;
@@ -63,7 +63,7 @@ class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
         _transcript = null;
       });
 
-      final text = await _transcriptionService.transcribeFile(_file!);
+      final text = await compute(transcribeFileInBackground, _file!);
       if (!mounted) return;
       context.read<ContentProvider>().setFileContent(
         path: _file!.path,
