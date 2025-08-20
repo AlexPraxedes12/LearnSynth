@@ -41,7 +41,7 @@ dependencies:
   ffmpeg_kit_flutter_min_gpl: ^6.0.0
   just_audio: ^0.9.36
   pdf_text: ^0.9.0
-  flutter_whisper: ^0.3.1
+  vosk_flutter: ^1.0.0
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -68,6 +68,9 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  assets:
+    - assets/models/vosk-model-small/
 
   # To add assets to your application, add an assets section, like this:
   # assets:
