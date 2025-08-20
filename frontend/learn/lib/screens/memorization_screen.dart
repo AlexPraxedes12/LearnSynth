@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../widgets/flashcard_widget.dart';
 import '../widgets/primary_button.dart';
@@ -9,12 +9,12 @@ import '../content_provider.dart';
 /// Presents flashcard‑style activities for memorization. Buttons for
 /// grading difficulty are included. Completion navigates to the
 /// progress screen via [Navigator.pushNamed].
-class MemorizationScreen extends StatelessWidget {
+class MemorizationScreen extends ConsumerWidget {
   const MemorizationScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final cards = context.watch<ContentProvider>().flashcards;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cards = ref.watch(contentProvider).flashcards;
     return Scaffold(
       appBar: AppBar(title: const Text('Memorization')),
       body: Padding(

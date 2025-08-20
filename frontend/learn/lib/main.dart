@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'constants.dart';
 import 'theme/app_theme.dart';
@@ -16,14 +17,12 @@ import 'screens/contextual_association_screen.dart';
 import 'screens/interactive_evaluation_screen.dart';
 import 'screens/progress_screen.dart';
 import 'screens/text_input_screen.dart';
-import 'package:provider/provider.dart';
 import 'content_provider.dart';
 
 void main() {
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => ContentProvider(),
-      child: const StudyApp(),
+    const ProviderScope(
+      child: StudyApp(),
     ),
   );
 }

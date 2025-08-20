@@ -2,9 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:ffmpeg_kit_flutter_min_gpl/ffmpeg_kit.dart';
-import 'package:just_audio/just_audio.dart';
-import 'package:speech_to_text/speech_recognition_result.dart';
-import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:whisper_flutter/whisper_flutter.dart';
 
 /// A simple wrapper that mimics an FFmpeg session result.
 class FfmpegResult<T> {
@@ -18,7 +16,7 @@ class FfmpegResult<T> {
 
 /// Provides audio transcription utilities backed by on-device processing.
 class TranscriptionService {
-  final stt.SpeechToText _speech = stt.SpeechToText();
+  final Whisper _whisper = Whisper();
 
   /// Extracts the audio track from a [videoFile] and stores it as a WAV file.
   ///
@@ -48,53 +46,14 @@ class TranscriptionService {
   /// recognizer. A [FfmpegResult] containing the transcription text is returned
   /// on success, otherwise the [data] is `null` and [returnCode] is non-zero.
   Future<FfmpegResult<String>> transcribeAudio(File audioFile) async {
-    final player = AudioPlayer();
     try {
-      final available = await _speech.initialize();
-      if (!available) {
-        return const FfmpegResult<String>(data: null, returnCode: 1);
-      }
-
-      final completer = Completer<String>();
-      await _speech.listen(
-        onResult: (SpeechRecognitionResult result) {
-          if (result.finalResult) {
-            if (!completer.isCompleted) {
-              completer.complete(result.recognizedWords);
-            }
-          }
-        },
-        listenFor: const Duration(minutes: 5),
-        partialResults: false,
-        onDevice: true,
-      );
-
-      await player.setFilePath(audioFile.path);
-      await player.play();
-
-      // Wait for the audio to finish playing
-      await player.processingStateStream.firstWhere(
-        (state) => state == ProcessingState.completed,
-      );
-
-      final transcript = await completer.future.timeout(
-        const Duration(seconds: 5),
-        onTimeout: () => '',
-      );
-
-      await _speech.stop();
-      await player.stop();
-
-      if (transcript.isEmpty) {
+      final transcript = await _whisper.convertFileToText(audioFile.path);
+      if (transcript.trim().isEmpty) {
         return const FfmpegResult<String>(data: null, returnCode: 1);
       }
       return FfmpegResult<String>(data: transcript, returnCode: 0);
     } catch (_) {
-      await _speech.stop();
-      await player.stop();
       return const FfmpegResult<String>(data: null, returnCode: 1);
-    } finally {
-      await player.dispose();
     }
   }
 }
