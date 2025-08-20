@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:provider/provider.dart';
 
 import '../widgets/primary_button.dart';
 import '../constants.dart';
@@ -11,12 +11,12 @@ import '../widgets/key_value_card.dart';
 /// navigate to the progress screen using a named route (not
 
 /// replacement) to preserve navigation history.
-class DeepUnderstandingScreen extends ConsumerWidget {
+class DeepUnderstandingScreen extends StatelessWidget {
   const DeepUnderstandingScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final provider = ref.watch(contentProvider);
+  Widget build(BuildContext context) {
+    final provider = context.watch<ContentProvider>();
     final conceptMap = provider.conceptMap;
     final links = (conceptMap?['links'] as List?);
 

@@ -2,21 +2,21 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:provider/provider.dart';
 import '../widgets/primary_button.dart';
 import '../constants.dart';
 import '../content_provider.dart';
 import '../services/transcription_service.dart';
 
 /// Picks a video file, extracts the audio track, and transcribes it locally.
-class VideoPickerScreen extends ConsumerStatefulWidget {
+class VideoPickerScreen extends StatefulWidget {
   const VideoPickerScreen({super.key});
 
   @override
-  ConsumerState<VideoPickerScreen> createState() => _VideoPickerScreenState();
+  State<VideoPickerScreen> createState() => _VideoPickerScreenState();
 }
 
-class _VideoPickerScreenState extends ConsumerState<VideoPickerScreen> {
+class _VideoPickerScreenState extends State<VideoPickerScreen> {
   File? _videoFile;
   bool _isProcessing = false;
   String? _transcript;
@@ -55,7 +55,7 @@ class _VideoPickerScreenState extends ConsumerState<VideoPickerScreen> {
         return;
       }
       if (!mounted) return;
-      ref.read(contentProvider).setFileContent(
+      context.read<ContentProvider>().setFileContent(
         path: _videoFile!.path,
         content: text,
       );

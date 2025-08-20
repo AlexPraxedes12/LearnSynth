@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:provider/provider.dart';
 
 import '../widgets/quiz_question_card.dart';
 import '../widgets/primary_button.dart';
@@ -10,12 +10,13 @@ import '../widgets/key_value_card.dart';
 /// Presents an interactive quiz. After submitting answers, the user can
 /// complete the session which navigates to the progress screen using
 /// [Navigator.pushNamed].
-class InteractiveEvaluationScreen extends ConsumerWidget {
+class InteractiveEvaluationScreen extends StatelessWidget {
   const InteractiveEvaluationScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final exercises = ref.watch(contentProvider).evaluationQuestions;
+  Widget build(BuildContext context) {
+    final exercises =
+        context.watch<ContentProvider>().evaluationQuestions;
     return Scaffold(
       appBar: AppBar(title: const Text('Interactive Evaluation')),
       body: Padding(

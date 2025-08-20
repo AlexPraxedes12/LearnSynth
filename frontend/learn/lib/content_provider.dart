@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Simple model representing a piece of study content. Either [content]
 /// or [filePath] will be provided depending on how the content was
@@ -137,5 +136,3 @@ class ContentProvider extends ChangeNotifier {
   }
 }
 
-/// Global provider exposing [ContentProvider] via Riverpod.
-final contentProvider = ChangeNotifierProvider<ContentProvider>((ref) => ContentProvider());
