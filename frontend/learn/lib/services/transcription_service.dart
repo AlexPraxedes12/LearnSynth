@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:ffmpeg_kit_flutter/ffmpeg_kit.dart';
+import 'package:flutter_ffmpeg/flutter_ffmpeg.dart';
 
 import 'package:speech_to_text/speech_to_text.dart';
 
@@ -18,6 +18,7 @@ class FfmpegResult<T> {
 /// Provides audio transcription utilities backed by on-device processing.
 class TranscriptionService {
   final SpeechToText _speech = SpeechToText();
+  final FlutterFFmpeg _ffmpeg = FlutterFFmpeg();
 
   /// Extracts the audio track from a [videoFile] and stores it as a WAV file.
   ///
@@ -28,10 +29,9 @@ class TranscriptionService {
     final outputPath =
         '${videoFile.path}_${DateTime.now().millisecondsSinceEpoch}.wav';
     try {
-      final session = await FFmpegKit.execute(
+      final code = await _ffmpeg.execute(
         '-y -i "${videoFile.path}" -vn -acodec pcm_s16le -ar 16000 -ac 1 "$outputPath"',
       );
-      final code = (await session.getReturnCode() ?? 1) as int;
       if (code == 0) {
         return FfmpegResult(data: File(outputPath), returnCode: code);
       }
