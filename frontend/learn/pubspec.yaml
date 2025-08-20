@@ -39,7 +39,7 @@ dependencies:
   just_audio: ^0.9.36
   file_selector: ^1.0.3
   speech_to_text: ^6.6.2
-  pdfx: ^2.6.0
+  native_pdf_renderer: ^6.0.1
   cupertino_icons: ^1.0.8
 
 dev_dependencies:
