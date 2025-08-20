@@ -1,36 +1,37 @@
 import 'dart:io';
 import 'package:flutter_sound/flutter_sound.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:vosk_flutter/vosk_flutter.dart';
 
 class TranscriptionService {
   final FlutterSoundHelper _soundHelper = FlutterSoundHelper();
 
-  Future<String> transcribeAudio(File file) async {
-    // Ruta de salida WAV
+  Future<String> transcribeFile(File file) async {
+    // 1. Convert file to PCM16 WAV
     final outputPath =
         '${file.path}_${DateTime.now().millisecondsSinceEpoch}.wav';
+    await _soundHelper.convertFile(
+      file.path,
+      outputPath,
+      Codec.pcm16WAV,
+    );
 
-    // Convertir a PCM16 WAV con flutter_sound
-    await _soundHelper.convertFile(file.path, outputPath, Codec.pcm16WAV);
-
-    // Cargar modelo offline de Vosk (asegúrate de ponerlo en assets/vosk/)
+    // 2. Load Vosk model from assets
     final model = await Model.fromAsset('assets/vosk/model');
 
-    // Crear recognizer con sampleRate = 16kHz
+    // 3. Create recognizer with 16k sample rate
     final recognizer = Recognizer(model: model, sampleRate: 16000);
 
-    // Leer audio y alimentar el recognizer
-    final wavBytes = await File(outputPath).readAsBytes();
-    recognizer.acceptWaveformBytes(wavBytes);
+    // 4. Read audio file and send bytes to recognizer
+    final audioBytes = await File(outputPath).readAsBytes();
+    recognizer.acceptWaveformBytes(audioBytes);
 
-    // Obtener resultado
+    // 5. Get final result
     final result = recognizer.finalResult();
 
-    // Cerrar recognizer y modelo
+    // 6. Close recognizer and model
     recognizer.close();
     model.close();
 
-    return result.text;
+    return result;
   }
 }
