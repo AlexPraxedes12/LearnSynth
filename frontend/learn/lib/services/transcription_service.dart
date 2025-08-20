@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:ffmpeg_kit_flutter_min_gpl/ffmpeg_kit.dart';
-import 'package:whisper_flutter/whisper_flutter.dart';
+import 'package:vosk_flutter/vosk_flutter.dart';
 
 /// A simple wrapper that mimics an FFmpeg session result.
 class FfmpegResult<T> {
@@ -16,7 +16,11 @@ class FfmpegResult<T> {
 
 /// Provides audio transcription utilities backed by on-device processing.
 class TranscriptionService {
-  final Whisper _whisper = Whisper();
+  final VoskFlutter _vosk = VoskFlutter();
+
+  TranscriptionService() {
+    unawaited(_vosk.init(modelPath: 'assets/models/vosk-model-small'));
+  }
 
   /// Extracts the audio track from a [videoFile] and stores it as a WAV file.
   ///
@@ -42,12 +46,12 @@ class TranscriptionService {
 
   /// Transcribes the given [audioFile] and returns the recognized text.
   ///
-  /// The transcription is performed on-device using the platform speech
-  /// recognizer. A [FfmpegResult] containing the transcription text is returned
+  /// The transcription is performed on-device using the Vosk speech recognition
+  /// engine. A [FfmpegResult] containing the transcription text is returned
   /// on success, otherwise the [data] is `null` and [returnCode] is non-zero.
   Future<FfmpegResult<String>> transcribeAudio(File audioFile) async {
     try {
-      final transcript = await _whisper.convertFileToText(audioFile.path);
+      final transcript = await _vosk.recognize(audioFile.path);
       if (transcript.trim().isEmpty) {
         return const FfmpegResult<String>(data: null, returnCode: 1);
       }
