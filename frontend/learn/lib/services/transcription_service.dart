@@ -1,11 +1,10 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter_ffmpeg/flutter_ffmpeg.dart';
-
+import 'package:flutter_sound/flutter_sound.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
-/// A simple wrapper that mimics an FFmpeg session result.
+/// Simple wrapper that mimics an FFmpeg session result.
 class FfmpegResult<T> {
   final T? data;
   final int returnCode;
@@ -18,24 +17,25 @@ class FfmpegResult<T> {
 /// Provides audio transcription utilities backed by on-device processing.
 class TranscriptionService {
   final SpeechToText _speech = SpeechToText();
-  final FlutterFFmpeg _ffmpeg = FlutterFFmpeg();
+  final FlutterSoundHelper _soundHelper = FlutterSoundHelper();
 
-  /// Extracts the audio track from a [videoFile] and stores it as a WAV file.
+  /// Extracts the audio track from [videoFile] and stores it as a WAV file.
   ///
   /// Returns a [FfmpegResult] whose [data] contains the generated audio file on
-  /// success or `null` on failure. The [returnCode] is propagated from the
-  /// underlying FFmpeg invocation when possible.
+  /// success or `null` on failure. `returnCode` is 0 on success, 1 on error.
   Future<FfmpegResult<File>> extractAudioFromVideo(File videoFile) async {
     final outputPath =
         '${videoFile.path}_${DateTime.now().millisecondsSinceEpoch}.wav';
+
     try {
-      final code = await _ffmpeg.execute(
-        '-y -i "${videoFile.path}" -vn -acodec pcm_s16le -ar 16000 -ac 1 "$outputPath"',
+      await _soundHelper.convertFile(
+        inputFile: videoFile.path,
+        outputFile: outputPath,
+        codec: Codec.pcm16WAV,
+        sampleRate: 16_000,
+        numChannels: 1,
       );
-      if (code == 0) {
-        return FfmpegResult(data: File(outputPath), returnCode: code);
-      }
-      return FfmpegResult<File>(data: null, returnCode: code);
+      return FfmpegResult<File>(data: File(outputPath), returnCode: 0);
     } catch (_) {
       return const FfmpegResult<File>(data: null, returnCode: 1);
     }
@@ -47,13 +47,14 @@ class TranscriptionService {
   /// listens to the microphone and returns the recognized text.
   ///
   /// The provided [audioFile] parameter is ignored as `speech_to_text` does not
-  /// support transcribing from pre-recorded files directly.
+  /// support transcribing from pre‑recorded files directly.
   Future<FfmpegResult<String>> transcribeAudio(File audioFile) async {
     try {
       final available = await _speech.initialize();
       if (!available) {
         return const FfmpegResult<String>(data: null, returnCode: 1);
       }
+
       final completer = Completer<String>();
       _speech.listen(
         onResult: (result) {
@@ -62,11 +63,14 @@ class TranscriptionService {
           }
         },
       );
+
       final transcript = await completer.future;
       await _speech.stop();
+
       if (transcript.trim().isEmpty) {
         return const FfmpegResult<String>(data: null, returnCode: 1);
       }
+
       return FfmpegResult<String>(data: transcript, returnCode: 0);
     } catch (_) {
       return const FfmpegResult<String>(data: null, returnCode: 1);
