@@ -10,7 +10,7 @@ import ffmpeg_kit_flutter_min_gpl
 import file_picker
 import just_audio
 import path_provider_foundation
-import speech_to_text_macos
+import whisper_flutter
 
 func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
   AudioSessionPlugin.register(with: registry.registrar(forPlugin: "AudioSessionPlugin"))
@@ -18,5 +18,5 @@ func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
   FilePickerPlugin.register(with: registry.registrar(forPlugin: "FilePickerPlugin"))
   JustAudioPlugin.register(with: registry.registrar(forPlugin: "JustAudioPlugin"))
   PathProviderPlugin.register(with: registry.registrar(forPlugin: "PathProviderPlugin"))
-  SpeechToTextMacosPlugin.register(with: registry.registrar(forPlugin: "SpeechToTextMacosPlugin"))
+  WhisperFlutterPlugin.register(with: registry.registrar(forPlugin: "WhisperFlutterPlugin"))
 }

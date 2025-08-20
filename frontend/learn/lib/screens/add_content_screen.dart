@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:file_picker/file_picker.dart';
-import 'package:provider/provider.dart';
 import '../widgets/method_card.dart';
 import '../constants.dart';
-import '../content_provider.dart';
 
 /// Lists the available ways to add new study content.
 class AddContentScreen extends StatelessWidget {
@@ -11,8 +8,6 @@ class AddContentScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final content = Provider.of<ContentProvider>(context, listen: false);
-
     return Scaffold(
       appBar: AppBar(title: const Text('Add Content')),
       body: Padding(
