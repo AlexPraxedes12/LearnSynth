@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -34,6 +36,7 @@ class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
   String? _transcript;
 
   Future<void> _pickFile() async {
+    File? tempFile;
     try {
       if (Platform.isAndroid) {
         // A bit of a hack, but we can infer the permission from the label.
@@ -57,7 +60,13 @@ class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
         _showError('No file selected.');
         return;
       }
-      _file = File(result.path);
+
+      // Create a temporary file
+      final tempDir = await getTemporaryDirectory();
+      tempFile = File(p.join(tempDir.path, result.name));
+      await result.saveTo(tempFile.path);
+
+      _file = tempFile;
       setState(() {
         _isProcessing = true;
         _transcript = null;
@@ -66,16 +75,21 @@ class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
       final text = await compute(transcribeFileInBackground, _file!);
       if (!mounted) return;
       context.read<ContentProvider>().setFileContent(
-        path: _file!.path,
-        content: text,
-      );
+            path: _file!.path,
+            content: text,
+          );
       setState(() {
         _transcript = text;
         _isProcessing = false;
       });
     } catch (e) {
-      _showError('Transcription failed');
+      _showError('Transcription failed: ${e.toString()}');
       if (mounted) setState(() => _isProcessing = false);
+    } finally {
+      // Clean up the temporary file
+      if (tempFile != null && await tempFile.exists()) {
+        await tempFile.delete();
+      }
     }
   }
 
