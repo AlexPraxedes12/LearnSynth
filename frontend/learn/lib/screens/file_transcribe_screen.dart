@@ -1,12 +1,13 @@
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:file_selector/file_selector.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
-import 'package:provider/provider.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:provider/provider.dart';
+import 'package:flutter_isolate/flutter_isolate.dart';
 
 import '../services/transcription_service.dart';
 
@@ -37,6 +38,7 @@ class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
 
   Future<void> _pickFile() async {
     File? tempFile;
+    FlutterIsolate? isolate;
     try {
       if (Platform.isAndroid) {
         // A bit of a hack, but we can infer the permission from the label.
@@ -72,7 +74,12 @@ class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
         _transcript = null;
       });
 
-      final text = await compute(transcribeFileInBackground, _file!);
+      final receivePort = ReceivePort();
+      isolate = await FlutterIsolate.spawn(
+        transcriptionIsolate,
+        [_file!.path, receivePort.sendPort],
+      );
+      final text = await receivePort.first as String;
       if (!mounted) return;
       context.read<ContentProvider>().setFileContent(
             path: _file!.path,
@@ -86,7 +93,8 @@ class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
       _showError('Transcription failed: ${e.toString()}');
       if (mounted) setState(() => _isProcessing = false);
     } finally {
-      // Clean up the temporary file
+      // Ensure isolate and temporary files are cleaned up
+      isolate?.kill(priority: Isolate.immediate);
       if (tempFile != null && await tempFile.exists()) {
         await tempFile.delete();
       }
