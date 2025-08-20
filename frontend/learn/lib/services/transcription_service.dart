@@ -1,37 +1,49 @@
+import 'dart:convert';
 import 'dart:io';
-import 'package:flutter_sound/flutter_sound.dart';
+
+import 'package:ffmpeg_kit_flutter/ffmpeg_kit.dart';
+import 'package:ffmpeg_kit_flutter/return_code.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:vosk_flutter/vosk_flutter.dart';
 
 class TranscriptionService {
-  final FlutterSoundHelper _soundHelper = FlutterSoundHelper();
-
   Future<String> transcribeFile(File file) async {
-    // 1. Convert file to PCM16 WAV
-    final outputPath =
-        '${file.path}_${DateTime.now().millisecondsSinceEpoch}.wav';
-    await _soundHelper.convertFile(
-      file.path,
-      outputPath,
-      Codec.pcm16WAV,
-    );
+    String? outputPath;
+    Recognizer? recognizer;
+    Model? model;
 
-    // 2. Load Vosk model from assets
-    final model = await Model.fromAsset('assets/vosk/model');
+    try {
+      final tempDir = await getTemporaryDirectory();
+      outputPath =
+          '${tempDir.path}/transcription_${DateTime.now().millisecondsSinceEpoch}.wav';
 
-    // 3. Create recognizer with 16k sample rate
-    final recognizer = Recognizer(model: model, sampleRate: 16000);
+      final session = await FFmpegKit.execute(
+          '-i "${file.path}" -ac 1 -ar 16000 -f wav "$outputPath"');
+      final returnCode = await session.getReturnCode();
+      if (returnCode == null || !ReturnCode.isSuccess(returnCode)) {
+        throw Exception('Audio extraction failed');
+      }
 
-    // 4. Read audio file and send bytes to recognizer
-    final audioBytes = await File(outputPath).readAsBytes();
-    recognizer.acceptWaveformBytes(audioBytes);
+      model = await Model.fromAsset('assets/vosk/model');
+      recognizer = Recognizer(model: model, sampleRate: 16000);
 
-    // 5. Get final result
-    final result = recognizer.finalResult();
+      final audioBytes = await File(outputPath).readAsBytes();
+      recognizer.acceptWaveformBytes(audioBytes);
 
-    // 6. Close recognizer and model
-    recognizer.close();
-    model.close();
-
-    return result;
+      final resultJson = await recognizer.getFinalResult();
+      final text = (jsonDecode(resultJson)['text'] as String?) ?? '';
+      return text;
+    } catch (e) {
+      return 'Transcription failed: $e';
+    } finally {
+      recognizer?.close();
+      model?.close();
+      if (outputPath != null) {
+        final tempFile = File(outputPath);
+        if (await tempFile.exists()) {
+          await tempFile.delete();
+        }
+      }
+    }
   }
 }
