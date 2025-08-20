@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:ffmpeg_kit_flutter_min_gpl/ffmpeg_kit.dart';
+import 'package:ffmpeg_kit_flutter/ffmpeg_kit.dart';
+
 import 'package:speech_to_text/speech_to_text.dart';
 
 /// A simple wrapper that mimics an FFmpeg session result.
@@ -54,11 +55,13 @@ class TranscriptionService {
         return const FfmpegResult<String>(data: null, returnCode: 1);
       }
       final completer = Completer<String>();
-      _speech.listen(onResult: (result) {
-        if (result.finalResult) {
-          completer.complete(result.recognizedWords);
-        }
-      });
+      _speech.listen(
+        onResult: (result) {
+          if (result.finalResult) {
+            completer.complete(result.recognizedWords);
+          }
+        },
+      );
       final transcript = await completer.future;
       await _speech.stop();
       if (transcript.trim().isEmpty) {

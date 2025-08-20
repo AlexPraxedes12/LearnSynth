@@ -35,7 +35,7 @@ dependencies:
   provider: ^6.1.0
   http: ^1.2.1
   permission_handler: ^11.3.0
-  ffmpeg_kit_flutter_min_gpl: ^6.0.0
+  ffmpeg_kit_flutter: 6.0.1
   just_audio: ^0.9.36
   file_selector: ^1.0.3
   speech_to_text: ^6.6.2
