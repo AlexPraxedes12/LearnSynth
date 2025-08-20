@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:file_picker/file_picker.dart';
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -34,15 +34,16 @@ class _AudioPickerScreenState extends State<AudioPickerScreen> {
         }
       }
 
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['mp3', 'wav', 'm4a'],
+      final XFile? result = await openFile(
+        acceptedTypeGroups: [
+          XTypeGroup(label: 'audio', extensions: ['mp3', 'wav', 'm4a']),
+        ],
       );
-      if (result == null || result.files.single.path == null) {
+      if (result == null) {
         _showError('No file selected.');
         return;
       }
-      _selectedFile = File(result.files.single.path!);
+      _selectedFile = File(result.path);
       setState(() {
         _isProcessing = true;
         _transcript = null;
