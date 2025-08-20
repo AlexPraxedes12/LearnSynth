@@ -5,6 +5,9 @@ import 'package:vosk_flutter/vosk_flutter.dart';
 
 /// Provides audio transcription utilities backed by the Vosk speech
 /// recognition engine.
+///
+/// Transcription runs entirely on-device using the Vosk model bundled in
+/// `assets/vosk/`, so no network connectivity is required.
 class TranscriptionService {
   final FlutterSoundHelper _soundHelper = FlutterSoundHelper();
 
