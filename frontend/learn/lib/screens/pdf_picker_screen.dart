@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:pdf_text/pdf_text.dart';
+import 'package:pdfx/pdfx.dart';
 
 import '../widgets/primary_button.dart';
 import '../constants.dart';
@@ -43,8 +43,15 @@ class _PdfPickerScreenState extends State<PdfPickerScreen> {
     });
 
     try {
-      final doc = await PDFDoc.fromFile(_file!);
-      final extracted = await doc.text;
+      final document = await PdfDocument.openFile(_file!.path);
+      String extracted = '';
+      for (var i = 1; i <= document.pagesCount; i++) {
+        final page = await document.getPage(i);
+        final text = await page.getText();
+        extracted += text?.text ?? '';
+        await page.close();
+      }
+      await document.close();
       if (!mounted) return;
       context.read<ContentProvider>().setFileContent(
         path: _file!.path,
