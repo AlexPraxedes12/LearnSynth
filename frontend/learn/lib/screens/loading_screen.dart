@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../widgets/quote_card.dart';
 import '../constants.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:provider/provider.dart';
 import '../content_provider.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -11,18 +11,18 @@ import 'package:http/http.dart' as http;
 /// screen. We use [Navigator.pushNamed] here rather than
 /// [Navigator.pushReplacementNamed] so that the user can navigate
 /// back if desired.
-class LoadingScreen extends ConsumerStatefulWidget {
+class LoadingScreen extends StatefulWidget {
   const LoadingScreen({super.key});
 
   @override
-  ConsumerState<LoadingScreen> createState() => _LoadingScreenState();
+  State<LoadingScreen> createState() => _LoadingScreenState();
 }
 
-class _LoadingScreenState extends ConsumerState<LoadingScreen> {
+class _LoadingScreenState extends State<LoadingScreen> {
   @override
   void initState() {
     super.initState();
-    final provider = ref.read(contentProvider);
+    final provider = context.read<ContentProvider>();
     if (provider.summary != null && provider.summary!.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback(
         (_) => Navigator.pushNamed(context, Routes.analysis),
@@ -33,7 +33,7 @@ class _LoadingScreenState extends ConsumerState<LoadingScreen> {
   }
 
   Future<void> _analyze() async {
-    final provider = ref.read(contentProvider);
+    final provider = context.read<ContentProvider>();
     try {
       final url = Uri.parse('http://10.0.2.2:8000/analyze');
       final response = await http.post(

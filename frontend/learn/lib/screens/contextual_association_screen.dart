@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:provider/provider.dart';
 
 import '../widgets/primary_button.dart';
 import '../constants.dart';
@@ -9,12 +9,12 @@ import '../widgets/key_value_card.dart';
 /// Encourages users to relate concepts to real‑world scenarios. Once
 /// complete, navigation continues to the progress screen using
 /// [Navigator.pushNamed].
-class ContextualAssociationScreen extends ConsumerWidget {
+class ContextualAssociationScreen extends StatelessWidget {
   const ContextualAssociationScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final exercises = ref.watch(contentProvider).contextualExercises;
+  Widget build(BuildContext context) {
+    final exercises = context.watch<ContentProvider>().contextualExercises;
     return Scaffold(
       appBar: AppBar(title: const Text('Contextual Association')),
       body: Padding(

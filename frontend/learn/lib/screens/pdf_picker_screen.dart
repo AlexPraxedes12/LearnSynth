@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:provider/provider.dart';
 import 'package:pdf_text/pdf_text.dart';
 
 import '../widgets/primary_button.dart';
@@ -10,14 +10,14 @@ import '../constants.dart';
 import '../content_provider.dart';
 
 /// Allows the user to pick a PDF file and extract its text locally.
-class PdfPickerScreen extends ConsumerStatefulWidget {
+class PdfPickerScreen extends StatefulWidget {
   const PdfPickerScreen({super.key});
 
   @override
-  ConsumerState<PdfPickerScreen> createState() => _PdfPickerScreenState();
+  State<PdfPickerScreen> createState() => _PdfPickerScreenState();
 }
 
-class _PdfPickerScreenState extends ConsumerState<PdfPickerScreen> {
+class _PdfPickerScreenState extends State<PdfPickerScreen> {
   File? _file;
   String? _text;
   bool _isProcessing = false;
@@ -45,7 +45,7 @@ class _PdfPickerScreenState extends ConsumerState<PdfPickerScreen> {
       final doc = await PDFDoc.fromFile(_file!);
       final extracted = await doc.text;
       if (!mounted) return;
-      ref.read(contentProvider).setFileContent(
+      context.read<ContentProvider>().setFileContent(
         path: _file!.path,
         content: extracted,
       );

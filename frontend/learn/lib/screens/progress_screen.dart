@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:provider/provider.dart';
 
 import '../content_provider.dart';
 import '../widgets/progress_summary_card.dart';
@@ -8,12 +8,12 @@ import '../widgets/quote_card.dart';
 /// Displays summary statistics for the user’s progress. Navigation back
 /// to the home page is provided by the bottom navigation bar, so we
 /// simply show a motivational quote instead of a button.
-class ProgressScreen extends ConsumerWidget {
+class ProgressScreen extends StatelessWidget {
   const ProgressScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final provider = ref.watch(contentProvider);
+  Widget build(BuildContext context) {
+    final provider = context.watch<ContentProvider>();
     final progress = provider.progress;
     return Scaffold(
       appBar: AppBar(title: const Text('Progress')),

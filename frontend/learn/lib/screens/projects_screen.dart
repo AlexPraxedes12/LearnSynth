@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:provider/provider.dart';
 import '../content_provider.dart';
 import '../theme/app_theme.dart';
 
 /// Displays the list of saved study content. Replaces the old
 /// [LibraryScreen] which was an empty placeholder.
-class ProjectsScreen extends ConsumerWidget {
+class ProjectsScreen extends StatelessWidget {
   const ProjectsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final provider = ref.watch(contentProvider);
+  Widget build(BuildContext context) {
+    final provider = context.watch<ContentProvider>();
     final items = provider.savedContent;
     return Scaffold(
       appBar: AppBar(title: const Text('Library')),

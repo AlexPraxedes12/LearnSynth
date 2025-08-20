@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:provider/provider.dart';
 
 import '../widgets/method_card.dart';
 import '../constants.dart';
@@ -7,12 +7,12 @@ import '../content_provider.dart';
 
 /// Lists the available study methods. Each card navigates to its
 /// corresponding screen using a named route.
-class MethodSelectionScreen extends ConsumerWidget {
+class MethodSelectionScreen extends StatelessWidget {
   const MethodSelectionScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final summaries = ref.watch(contentProvider).activitySummaries;
+  Widget build(BuildContext context) {
+    final summaries = context.watch<ContentProvider>().activitySummaries;
     return Scaffold(
       appBar: AppBar(title: const Text('Study Methods')),
       body: Padding(

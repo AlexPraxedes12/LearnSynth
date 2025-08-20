@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:provider/provider.dart';
 import '../widgets/primary_button.dart';
 import '../constants.dart';
 import '../content_provider.dart';
@@ -7,12 +7,12 @@ import '../content_provider.dart';
 /// Presents the processed text to the user and allows them to choose
 /// their preferred study method. The text is scrollable and uses
 /// the current theme’s text styles.
-class AnalysisScreen extends ConsumerWidget {
+class AnalysisScreen extends StatelessWidget {
   const AnalysisScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final provider = ref.watch(contentProvider);
+  Widget build(BuildContext context) {
+    final provider = context.watch<ContentProvider>();
     final summary = provider.summary ?? 'Summary will appear here.';
     final topics = provider.topics.isNotEmpty
         ? provider.topics.join(', ')

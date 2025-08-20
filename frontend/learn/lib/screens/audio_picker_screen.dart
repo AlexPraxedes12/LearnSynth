@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:provider/provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../services/transcription_service.dart';
@@ -13,14 +13,14 @@ import '../widgets/primary_button.dart';
 
 /// Screen that lets the user pick an audio file, convert and transcribe it
 /// locally for analysis.
-class AudioPickerScreen extends ConsumerStatefulWidget {
+class AudioPickerScreen extends StatefulWidget {
   const AudioPickerScreen({super.key});
 
   @override
-  ConsumerState<AudioPickerScreen> createState() => _AudioPickerScreenState();
+  State<AudioPickerScreen> createState() => _AudioPickerScreenState();
 }
 
-class _AudioPickerScreenState extends ConsumerState<AudioPickerScreen> {
+class _AudioPickerScreenState extends State<AudioPickerScreen> {
   File? _selectedFile;
   bool _isProcessing = false;
   String? _transcript;
@@ -63,7 +63,7 @@ class _AudioPickerScreenState extends ConsumerState<AudioPickerScreen> {
         return;
       }
       if (!mounted) return;
-      ref.read(contentProvider).setFileContent(
+      context.read<ContentProvider>().setFileContent(
         path: _selectedFile!.path,
         content: transcription,
       );

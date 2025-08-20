@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:provider/provider.dart';
 
 import 'constants.dart';
 import 'theme/app_theme.dart';
@@ -20,7 +20,12 @@ import 'screens/text_input_screen.dart';
 import 'content_provider.dart';
 
 void main() {
-  runApp(ProviderScope(child: StudyApp()));
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => ContentProvider(),
+      child: const StudyApp(),
+    ),
+  );
 }
 
 class StudyApp extends StatelessWidget {
