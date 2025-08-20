@@ -20,11 +20,7 @@ import 'screens/text_input_screen.dart';
 import 'content_provider.dart';
 
 void main() {
-  runApp(
-    const ProviderScope(
-      child: StudyApp(),
-    ),
-  );
+  runApp(ProviderScope(child: StudyApp()));
 }
 
 class StudyApp extends StatelessWidget {
@@ -43,7 +39,7 @@ class StudyApp extends StatelessWidget {
         // in constants.dart. Also avoid using replacement navigation in
         // the routes table.
         Routes.home: (_) => const MainNavigation(),
-        Routes.textInput: (_) => const TextInputScreen(),
+        Routes.textInput: (_) => TextInputScreen(),
         Routes.pdfPicker: (_) => const PdfPickerScreen(),
         Routes.audio: (_) => const AudioPickerScreen(),
         Routes.videoPicker: (_) => const VideoPickerScreen(),
@@ -75,7 +71,7 @@ class MainNavigation extends StatefulWidget {
 
 class _MainNavigationState extends State<MainNavigation> {
   int _selectedIndex = 0;
-  final List<Widget> _screens = const [
+  final List<Widget> _screens = [
     AddContentScreen(),
     ProgressScreen(),
     ProjectsScreen(),
