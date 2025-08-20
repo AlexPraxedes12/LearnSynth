@@ -1,59 +1,36 @@
 import 'dart:io';
-
 import 'package:flutter_sound/flutter_sound.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:vosk_flutter/vosk_flutter.dart';
 
-/// Provides audio transcription utilities backed by the Vosk speech
-/// recognition engine.
-///
-/// Transcription runs entirely on-device using the Vosk model bundled in
-/// `assets/vosk/`, so no network connectivity is required.
 class TranscriptionService {
   final FlutterSoundHelper _soundHelper = FlutterSoundHelper();
 
-  /// Transcribes the given [file] and returns the recognized text.
-  ///
-  /// Video files have their audio track extracted before being processed.
-  Future<String> transcribeFile(File file) async {
-    File audioFile = file;
+  Future<String> transcribeAudio(File file) async {
+    // Ruta de salida WAV
+    final outputPath =
+        '${file.path}_${DateTime.now().millisecondsSinceEpoch}.wav';
 
-    final extension = file.path.split('.').last.toLowerCase();
-    if (_videoExtensions.contains(extension)) {
-      final outputPath =
-          '${file.path}_${DateTime.now().millisecondsSinceEpoch}.wav';
-      await _soundHelper.convertFile(
-        inputFile: file.path,
-        outputFile: outputPath,
-        codec: Codec.pcm16WAV,
-        sampleRate: 16_000,
-        numChannels: 1,
-      );
-      audioFile = File(outputPath);
-    }
+    // Convertir a PCM16 WAV con flutter_sound
+    await _soundHelper.convertFile(file.path, outputPath, Codec.pcm16WAV);
 
-    final bytes = await audioFile.readAsBytes();
-
+    // Cargar modelo offline de Vosk (asegúrate de ponerlo en assets/vosk/)
     final model = await Model.fromAsset('assets/vosk/model');
-    final recognizer = Recognizer(model: model, sampleRate: 16_000);
 
-    recognizer.acceptWaveform(bytes);
+    // Crear recognizer con sampleRate = 16kHz
+    final recognizer = Recognizer(model: model, sampleRate: 16000);
+
+    // Leer audio y alimentar el recognizer
+    final wavBytes = await File(outputPath).readAsBytes();
+    recognizer.acceptWaveformBytes(wavBytes);
+
+    // Obtener resultado
     final result = recognizer.finalResult();
 
+    // Cerrar recognizer y modelo
     recognizer.close();
     model.close();
 
-    if (audioFile.path != file.path) {
-      await audioFile.delete();
-    }
-
-    return result;
+    return result.text;
   }
-
-  static const Set<String> _videoExtensions = {
-    'mp4',
-    'mov',
-    'avi',
-    'mkv',
-  };
 }
-

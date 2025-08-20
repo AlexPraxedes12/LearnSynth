@@ -37,10 +37,12 @@ dependencies:
   permission_handler: ^11.3.0
   flutter_sound: ^9.2.13 # lightweight converter/recorder
   file_selector: ^1.0.3
-  vosk_flutter: ^0.3.38
-  syncfusion_flutter_pdf: ^27.1.57
+  vosk_flutter: ^0.3.48
+  syncfusion_flutter_pdf: ^25.2.7
   cupertino_icons: ^1.0.8
-
+dependency_overrides:
+  permission_handler: ^11.3.0
+  http: ^1.2.1
 dev_dependencies:
   flutter_test:
     sdk: flutter
