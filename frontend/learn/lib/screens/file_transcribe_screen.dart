@@ -1,25 +1,13 @@
 import 'dart:io';
-import 'dart:isolate';
-
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:provider/provider.dart';
-import 'package:flutter_isolate/flutter_isolate.dart';
-
 import '../services/transcription_service.dart';
-
-import '../constants.dart';
-import '../content_provider.dart';
-import '../widgets/primary_button.dart';
 
 class FileTranscribeScreen extends StatefulWidget {
   final String appBarTitle;
   final String buttonLabel;
   final XTypeGroup fileTypeGroup;
-
   const FileTranscribeScreen({
     super.key,
     required this.appBarTitle,
@@ -32,84 +20,29 @@ class FileTranscribeScreen extends StatefulWidget {
 }
 
 class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
-  File? _file;
-  bool _isProcessing = false;
+  File? _picked;
   String? _transcript;
+  bool _busy = false;
 
-  Future<void> _pickFile() async {
-    File? tempFile;
-    FlutterIsolate? isolate;
-    try {
-      if (Platform.isAndroid) {
-        // A bit of a hack, but we can infer the permission from the label.
-        if (widget.fileTypeGroup.label == 'audio') {
-          if (await Permission.audio.isDenied &&
-              await Permission.storage.isDenied) {
-            await [Permission.audio, Permission.storage].request();
-          }
-        } else if (widget.fileTypeGroup.label == 'video') {
-          if (await Permission.videos.isDenied &&
-              await Permission.storage.isDenied) {
-            await [Permission.videos, Permission.storage].request();
-          }
-        }
-      }
+  final _svc = TranscriptionService();
 
-      final XFile? result = await openFile(
-        acceptedTypeGroups: [widget.fileTypeGroup],
-      );
-      if (result == null) {
-        _showError('No file selected.');
-        return;
-      }
-
-      // Create a temporary file
-      final tempDir = await getTemporaryDirectory();
-      tempFile = File(p.join(tempDir.path, result.name));
-      await result.saveTo(tempFile.path);
-
-      _file = tempFile;
-      setState(() {
-        _isProcessing = true;
-        _transcript = null;
-      });
-
-      final receivePort = ReceivePort();
-      isolate = await FlutterIsolate.spawn(
-        transcriptionIsolate,
-        [_file!.path, receivePort.sendPort],
-      );
-      final text = await receivePort.first as String;
-      if (!mounted) return;
-      context.read<ContentProvider>().setFileContent(
-            path: _file!.path,
-            content: text,
-          );
-      setState(() {
-        _transcript = text;
-        _isProcessing = false;
-      });
-    } catch (e) {
-      _showError('Transcription failed: ${e.toString()}');
-      if (mounted) setState(() => _isProcessing = false);
-    } finally {
-      // Ensure isolate and temporary files are cleaned up
-      isolate?.kill(priority: Isolate.immediate);
-      if (tempFile != null && await tempFile.exists()) {
-        await tempFile.delete();
-      }
-    }
+  Future<void> _pick() async {
+    final xFile = await openFile(acceptedTypeGroups: [widget.fileTypeGroup]);
+    if (xFile == null) return;
+    setState(() {
+      _picked = File(xFile.path);
+      _transcript = null;
+    });
   }
 
-  void _continue() {
-    Navigator.pushNamed(context, Routes.loading);
-  }
-
-  void _showError(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+  Future<void> _run() async {
+    if (_picked == null) return;
+    setState(() => _busy = true);
+    final text = await _svc.transcribeFile(_picked!);
+    setState(() {
+      _transcript = text;
+      _busy = false;
+    });
   }
 
   @override
@@ -117,58 +50,30 @@ class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
     return Scaffold(
       appBar: AppBar(title: Text(widget.appBarTitle)),
       body: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          children: [
-            if (_file != null)
-              Card(
-                color: Theme.of(context).cardColor,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 4,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _file!.path.split('/').last,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(_file!.path),
-                    ],
-                  ),
-                ),
-              ),
-            if (_transcript != null)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16.0),
-                child: SizedBox(
-                  height: 150,
-                  child: SingleChildScrollView(
-                    child: Text(_transcript!),
-                  ),
-                ),
-              ),
-            const Spacer(),
-            PrimaryButton(
-              label: widget.buttonLabel,
-              onPressed: _isProcessing ? null : _pickFile,
-            ),
+        padding: const EdgeInsets.all(16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          if (_picked != null) ...[
+            Text(p.basename(_picked!.path), style: const TextStyle(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 4),
+            Text(_picked!.path, style: const TextStyle(fontSize: 12, color: Colors.white70)),
             const SizedBox(height: 16),
-            PrimaryButton(
-              label: 'Continue',
-              onPressed:
-                  (_transcript != null && !_isProcessing) ? _continue : null,
-            ),
-            if (_isProcessing) ...[
-              const SizedBox(height: 20),
-              const CircularProgressIndicator(),
-            ],
           ],
-        ),
+          if (_transcript != null) ...[
+            const Text('Transcript:', style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Expanded(child: SingleChildScrollView(child: Text(_transcript!))),
+            const SizedBox(height: 16),
+          ] else
+            const Spacer(),
+          if (_busy) const LinearProgressIndicator(),
+          const SizedBox(height: 12),
+          FilledButton(onPressed: _pick, child: Text(widget.buttonLabel)),
+          const SizedBox(height: 8),
+          FilledButton.tonal(
+            onPressed: (_picked != null && !_busy) ? _run : null,
+            child: const Text('Transcribe'),
+          ),
+        ]),
       ),
     );
   }

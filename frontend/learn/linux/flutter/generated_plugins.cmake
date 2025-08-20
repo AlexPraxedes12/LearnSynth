@@ -3,8 +3,9 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  ffmpeg_kit_flutter_new
   file_selector_linux
-  vosk_flutter
+  path_provider_linux
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST

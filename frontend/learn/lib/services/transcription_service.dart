@@ -1,78 +1,66 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:isolate';
 
-import 'package:ffmpeg_kit_flutter_full_gpl/ffmpeg_kit.dart';
-import 'package:ffmpeg_kit_flutter_full_gpl/return_code.dart';
+import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
+import 'package:ffmpeg_kit_flutter_new/return_code.dart';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
-import 'package:vosk_flutter/vosk_flutter.dart';
 
-/// Service responsible for transcribing media files using FFmpeg and Vosk.
 class TranscriptionService {
-  final VoskFlutterPlugin _vosk = VoskFlutterPlugin.instance();
+  // Android emulator: 10.0.2.2 points to the host machine
+  final Uri _endpoint = Uri.parse('http://10.0.2.2:8000/transcribe');
 
-  /// Transcribes the file located at [filePath].
-  ///
-  /// The input can be either an audio or video file. The audio stream is
-  /// extracted and converted to a 16kHz mono WAV file before being processed
-  /// by the Vosk recognizer.
-  Future<String> transcribe(String filePath) async {
-    final input = File(filePath);
-    if (!await input.exists()) {
-      return 'Error: Input file not found.';
-    }
-
-    final tempDir = await getTemporaryDirectory();
-    final tempWavPath =
-        p.join(tempDir.path, '${DateTime.now().millisecondsSinceEpoch}.wav');
-    final tempWavFile = File(tempWavPath);
-
+  Future<String> transcribeFile(File input) async {
+    File? tmpWav;
     try {
-      final command =
-          '-y -i "${input.path}" -ar 16000 -ac 1 -c:a pcm_s16le "$tempWavPath"';
-      final session = await FFmpegKit.execute(command);
-      final returnCode = await session.getReturnCode();
-      if (!ReturnCode.isSuccess(returnCode)) {
+      // 1) Convert to WAV 16kHz mono (strip video track if any)
+      final tmpDir = await getTemporaryDirectory();
+      final outPath = p.join(
+        tmpDir.path,
+        '${p.basenameWithoutExtension(input.path)}_${DateTime.now().millisecondsSinceEpoch}.wav',
+      );
+      tmpWav = File(outPath);
+
+      final ext = p.extension(input.path).toLowerCase();
+      final isVideo = ['.mp4', '.mkv', '.mov', '.avi', '.webm'].contains(ext);
+
+      final cmd = isVideo
+          ? '-i "${input.path}" -vn -ac 1 -ar 16000 -sample_fmt s16 -f wav "$outPath"'
+          : '-i "${input.path}" -ac 1 -ar 16000 -sample_fmt s16 -f wav "$outPath"';
+
+      final session = await FFmpegKit.execute(cmd);
+      final rc = await session.getReturnCode();
+      if (rc == null || !ReturnCode.isSuccess(rc)) {
         final logs = await session.getAllLogsAsString();
-        debugPrint('FFmpeg failed with code $returnCode. Logs: $logs');
-        throw Exception('Error processing media file.');
+        throw 'FFmpeg failed (rc=$rc). $logs';
+      }
+      if (!await tmpWav.exists()) throw 'WAV not created';
+
+      // 2) Upload to backend
+      final req = http.MultipartRequest('POST', _endpoint)
+        ..files.add(await http.MultipartFile.fromPath('file', tmpWav.path));
+
+      final streamed = await req.send().timeout(const Duration(minutes: 2));
+      final body = await streamed.stream.bytesToString();
+
+      if (streamed.statusCode != 200) {
+        throw 'HTTP ${streamed.statusCode}: $body';
       }
 
-      if (!await tempWavFile.exists()) {
-        throw Exception('Converted WAV file not found.');
-      }
-
-      final model = await _vosk.createModel('assets/vosk/model');
-      final recognizer =
-          await _vosk.createRecognizer(model: model, sampleRate: 16000);
-
-      final audioBytes = await tempWavFile.readAsBytes();
-      await recognizer.acceptWaveformBytes(audioBytes);
-      final resultJson = await recognizer.getFinalResult();
-      final result = jsonDecode(resultJson) as Map<String, dynamic>;
-      return result['text'] as String? ?? '';
-    } catch (e) {
-      debugPrint('Transcription error: $e');
-      return 'Error: Could not transcribe the file. Please check the file format and try again.';
+      // 3) Parse transcript
+      final map = jsonDecode(body) as Map<String, dynamic>;
+      final text = (map['text'] ?? map['transcript'] ?? map['result'] ?? '').toString();
+      if (text.trim().isEmpty) throw 'Empty transcript';
+      return text;
+    } catch (e, st) {
+      debugPrint('TranscriptionService error: $e\n$st');
+      return 'Error: $e';
     } finally {
-      if (await tempWavFile.exists()) {
-        await tempWavFile.delete();
+      if (tmpWav != null && await tmpWav.exists()) {
+        await tmpWav.delete();
       }
     }
   }
 }
-
-/// Entry point for running transcription in a background isolate via
-/// [FlutterIsolate.spawn]. Expects [message] to contain the file path followed
-/// by a [SendPort] to return the resulting transcript.
-Future<void> transcriptionIsolate(List<dynamic> message) async {
-  final String filePath = message[0] as String;
-  final SendPort sendPort = message[1] as SendPort;
-
-  final service = TranscriptionService();
-  final result = await service.transcribe(filePath);
-  Isolate.exit(sendPort, result);
-}
-

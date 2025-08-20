@@ -1,9 +1,7 @@
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
-
 import 'file_transcribe_screen.dart';
 
-/// Picks a video file and transcribes it locally.
 class VideoPickerScreen extends StatelessWidget {
   const VideoPickerScreen({super.key});
 
@@ -12,10 +10,7 @@ class VideoPickerScreen extends StatelessWidget {
     return const FileTranscribeScreen(
       appBarTitle: 'Upload Video',
       buttonLabel: 'Choose Video',
-      fileTypeGroup: XTypeGroup(
-        label: 'video',
-        mimeTypes: ['video/*'],
-      ),
+      fileTypeGroup: XTypeGroup(label: 'Video', extensions: ['mp4', 'mov', 'mkv', 'avi', 'webm']),
     );
   }
 }
