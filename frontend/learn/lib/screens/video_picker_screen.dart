@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:file_picker/file_picker.dart';
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../widgets/primary_button.dart';
@@ -22,12 +22,16 @@ class _VideoPickerScreenState extends State<VideoPickerScreen> {
   String? _transcript;
 
   Future<void> _pickVideo() async {
-    final result = await FilePicker.platform.pickFiles(type: FileType.video);
-    if (result == null || result.files.single.path == null) {
+    final XFile? result = await openFile(
+      acceptedTypeGroups: [
+        XTypeGroup(label: 'video', mimeTypes: ['video/*']),
+      ],
+    );
+    if (result == null) {
       _showError('No file selected.');
       return;
     }
-    _videoFile = File(result.files.single.path!);
+    _videoFile = File(result.path);
     setState(() {
       _isProcessing = true;
       _transcript = null;

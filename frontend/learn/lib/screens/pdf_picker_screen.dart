@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:file_picker/file_picker.dart';
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:pdf_text/pdf_text.dart';
@@ -23,19 +23,20 @@ class _PdfPickerScreenState extends State<PdfPickerScreen> {
   bool _isProcessing = false;
 
   Future<void> _pickPdf() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['pdf'],
+    final XFile? result = await openFile(
+      acceptedTypeGroups: [
+        XTypeGroup(label: 'pdf', extensions: ['pdf']),
+      ],
     );
     if (!mounted) return;
-    if (result == null || result.files.single.path == null) {
+    if (result == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('No file selected')),
       );
       return;
     }
 
-    _file = File(result.files.single.path!);
+    _file = File(result.path);
     setState(() {
       _isProcessing = true;
       _text = null;
