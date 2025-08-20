@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:ffmpeg_kit_flutter_min_gpl/ffmpeg_kit.dart';
-import 'package:vosk_flutter/vosk_flutter.dart';
+import 'package:speech_to_text/speech_to_text.dart';
 
 /// A simple wrapper that mimics an FFmpeg session result.
 class FfmpegResult<T> {
@@ -16,11 +16,7 @@ class FfmpegResult<T> {
 
 /// Provides audio transcription utilities backed by on-device processing.
 class TranscriptionService {
-  final VoskFlutter _vosk = VoskFlutter();
-
-  TranscriptionService() {
-    unawaited(_vosk.init(modelPath: 'assets/models/vosk-model-small'));
-  }
+  final SpeechToText _speech = SpeechToText();
 
   /// Extracts the audio track from a [videoFile] and stores it as a WAV file.
   ///
@@ -46,12 +42,25 @@ class TranscriptionService {
 
   /// Transcribes the given [audioFile] and returns the recognized text.
   ///
-  /// The transcription is performed on-device using the Vosk speech recognition
-  /// engine. A [FfmpegResult] containing the transcription text is returned
-  /// on success, otherwise the [data] is `null` and [returnCode] is non-zero.
+  /// The transcription is performed using the [SpeechToText] plugin, which
+  /// listens to the microphone and returns the recognized text.
+  ///
+  /// The provided [audioFile] parameter is ignored as `speech_to_text` does not
+  /// support transcribing from pre-recorded files directly.
   Future<FfmpegResult<String>> transcribeAudio(File audioFile) async {
     try {
-      final transcript = await _vosk.recognize(audioFile.path);
+      final available = await _speech.initialize();
+      if (!available) {
+        return const FfmpegResult<String>(data: null, returnCode: 1);
+      }
+      final completer = Completer<String>();
+      _speech.listen(onResult: (result) {
+        if (result.finalResult) {
+          completer.complete(result.recognizedWords);
+        }
+      });
+      final transcript = await completer.future;
+      await _speech.stop();
       if (transcript.trim().isEmpty) {
         return const FfmpegResult<String>(data: null, returnCode: 1);
       }
