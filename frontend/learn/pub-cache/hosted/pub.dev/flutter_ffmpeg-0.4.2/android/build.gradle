@@ -1,0 +1,4 @@
+android {
+    namespace "com.arthenica.flutter.ffmpeg"
+    compileSdkVersion 30
+}
