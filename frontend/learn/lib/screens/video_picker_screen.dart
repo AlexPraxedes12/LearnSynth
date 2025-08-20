@@ -8,7 +8,7 @@ import '../constants.dart';
 import '../content_provider.dart';
 import '../services/transcription_service.dart';
 
-/// Picks a video file, extracts the audio track, and transcribes it locally.
+/// Picks a video file and transcribes it locally.
 class VideoPickerScreen extends StatefulWidget {
   const VideoPickerScreen({super.key});
 
@@ -17,6 +17,7 @@ class VideoPickerScreen extends StatefulWidget {
 }
 
 class _VideoPickerScreenState extends State<VideoPickerScreen> {
+  final TranscriptionService _transcriptionService = TranscriptionService();
   File? _videoFile;
   bool _isProcessing = false;
   String? _transcript;
@@ -38,26 +39,7 @@ class _VideoPickerScreenState extends State<VideoPickerScreen> {
     });
 
     try {
-      final service = TranscriptionService();
-      final audioResult = await service.extractAudioFromVideo(_videoFile!);
-      if (!audioResult.isSuccess) {
-        _showError('Audio extraction failed');
-        if (mounted) setState(() => _isProcessing = false);
-        return;
-      }
-      final audioFile = audioResult.data!;
-      final textResult = await service.transcribeAudio(audioFile);
-      if (!textResult.isSuccess) {
-        _showError('Transcription failed');
-        if (mounted) setState(() => _isProcessing = false);
-        return;
-      }
-      final text = textResult.data ?? '';
-      if (text.trim().isEmpty) {
-        _showError('No text produced.');
-        if (mounted) setState(() => _isProcessing = false);
-        return;
-      }
+      final text = await _transcriptionService.transcribeFile(_videoFile!);
       if (!mounted) return;
       context.read<ContentProvider>().setFileContent(
         path: _videoFile!.path,
@@ -68,7 +50,7 @@ class _VideoPickerScreenState extends State<VideoPickerScreen> {
         _isProcessing = false;
       });
     } catch (e) {
-      _showError('Processing failed');
+      _showError('Transcription failed');
       if (mounted) setState(() => _isProcessing = false);
     }
   }
@@ -112,6 +94,16 @@ class _VideoPickerScreenState extends State<VideoPickerScreen> {
                       const SizedBox(height: 8),
                       Text(_videoFile!.path),
                     ],
+                  ),
+                ),
+              ),
+            if (_transcript != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16.0),
+                child: SizedBox(
+                  height: 150,
+                  child: SingleChildScrollView(
+                    child: Text(_transcript!),
                   ),
                 ),
               ),
