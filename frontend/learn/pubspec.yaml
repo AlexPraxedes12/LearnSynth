@@ -35,7 +35,7 @@ dependencies:
   provider: ^6.1.0
   http: ^1.2.1
   permission_handler: ^11.3.0
-  flutter_sound: ^9.2.13 # lightweight converter/recorder
+  flutter_sound: ^9.28.0 # lightweight converter/recorder
   file_selector: ^1.0.3
   vosk_flutter: ^0.3.48
   syncfusion_flutter_pdf: ^25.2.7
@@ -65,4 +65,4 @@ flutter:
   # the material Icons class.
   uses-material-design: true
   assets:
-    - assets/vosk/
+    - assets/vosk/model/
