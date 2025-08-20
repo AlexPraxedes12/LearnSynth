@@ -40,7 +40,7 @@ dependencies:
   flutter_sound: ^9.2.13  # lightweight converter/recorder
   just_audio: ^0.9.36
   file_selector: ^1.0.3
-  speech_to_text: ^6.6.2
+  vosk_flutter: ^0.3.38
   syncfusion_flutter_pdf: ^27.1.57
   cupertino_icons: ^1.0.8
 
