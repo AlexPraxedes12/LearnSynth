@@ -12,14 +12,12 @@ import 'analysis_screen.dart';
 class FileTranscribeScreen extends StatefulWidget {
   final String appBarTitle;
   final String buttonLabel;
-  final XTypeGroup fileTypeGroup;
-  final bool enableStudyPack;
+  final XTypeGroup typeGroup;
   const FileTranscribeScreen({
     super.key,
     required this.appBarTitle,
     required this.buttonLabel,
-    required this.fileTypeGroup,
-    this.enableStudyPack = false,
+    required this.typeGroup,
   });
 
   @override
@@ -27,16 +25,16 @@ class FileTranscribeScreen extends StatefulWidget {
 }
 
 class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
-  File? _picked;
-  String? _error;
   bool _busy = false;
-  bool _analyzing = false;
+  String? _error;
+  File? _picked;
 
+  ContentProvider get _provider => context.read<ContentProvider>();
   final _svc = TranscriptionService();
 
   Future<void> _pick() async {
-    if (_busy || _analyzing) return;
-    final x = await openFile(acceptedTypeGroups: [widget.fileTypeGroup]);
+    if (_busy || _provider.analyzing) return;
+    final x = await openFile(acceptedTypeGroups: [widget.typeGroup]);
     if (x == null) return;
     if (!mounted) return;
     setState(() {
@@ -44,69 +42,13 @@ class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
     });
   }
 
-  Future<void> _run() async {
-    if (_busy) return;
-    final f = _picked;
-    if (f == null) return;
-
-    setState(() {
-      _busy = true;
-      _error = null;
-    });
-
-    String out;
-    try {
-      out = await _svc.sendFile(f);
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _busy = false;
-        _error = e.toString();
-      });
-      return;
-    }
-
-    if (!mounted) return;
-    setState(() {
-      _busy = false;
-    });
-
-    // Persist transcript in Provider for later analysis
-    context.read<ContentProvider>().setTranscript(out);
-  }
-
-  Future<void> _continueToAnalysis() async {
-    if (_analyzing) return;
-    setState(() => _analyzing = true);
-
-    final provider = context.read<ContentProvider>();
-    provider.setMode(StudyMode.memorization);
-    try {
-      await provider.runAnalysis();
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _analyzing = false;
-        _error = e.toString();
-      });
-      return;
-    }
-
-    if (!mounted) return;
-    setState(() => _analyzing = false);
-
-    if (provider.error == null && mounted) {
-      Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const AnalysisScreen()),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final p = context.watch<ContentProvider>();
-    final hasTranscript = p.content?.isNotEmpty ?? false;
-    final canTranscribe = !_busy && _picked != null && !hasTranscript;
+    final hasTranscript =
+        context.select<ContentProvider, bool>((p) => (p.content?.isNotEmpty ?? false));
+    final analyzing = context.watch<ContentProvider>().analyzing;
+    final String cta = hasTranscript ? 'Continue' : 'Transcribe';
+    final bool enabled = !_busy && !analyzing && (_picked != null);
 
     return Scaffold(
       appBar: AppBar(title: Text(widget.appBarTitle)),
@@ -122,38 +64,51 @@ class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
                   style: const TextStyle(fontSize: 12, color: Colors.white70)),
               const SizedBox(height: 16),
             ],
-
             if (_error != null)
               Text(_error!, style: const TextStyle(color: Colors.red)),
-
             const Spacer(),
-
-            // Choose File (always enabled unless busy/analyzing)
             WideButton(
               label: widget.buttonLabel,
-              onPressed: _busy || _analyzing ? null : _pick,
-              primary: false,
+              onPressed: _busy || analyzing ? null : _pick,
             ),
             const SizedBox(height: 12),
-
-            // If there is NO transcript yet -> show Transcribe
-            if (!hasTranscript)
-              WideButton(
-                label: 'Transcribe',
-                onPressed: canTranscribe ? _run : null,
-                primary: true,
-              ),
-
-            // If there IS a transcript -> show Continue instead
-            if (hasTranscript)
-              WideButton(
-                label: _analyzing ? 'Analyzing...' : 'Continue',
-                onPressed: _analyzing ? null : _continueToAnalysis,
-                primary: true,
-              ),
+            WideButton(
+              label: cta,
+              onPressed: !enabled
+                  ? null
+                  : () async {
+                      if (!hasTranscript) {
+                        setState(() {
+                          _busy = true;
+                          _error = null;
+                        });
+                        try {
+                          final out = await _svc.sendFile(_picked!);
+                          _provider.setTranscript(out);
+                        } catch (e) {
+                          setState(() => _error = 'Transcription failed: $e');
+                        } finally {
+                          if (mounted) setState(() => _busy = false);
+                        }
+                      } else {
+                        await _provider.runAnalysis(mode: widget.typeGroup.toStudyMode());
+                        if (mounted && _provider.error == null) {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const AnalysisScreen()),
+                          );
+                        }
+                      }
+                    },
+            ),
           ],
         ),
       ),
     );
+  }
+}
+
+extension on XTypeGroup {
+  StudyMode toStudyMode() {
+    return StudyMode.memorization;
   }
 }

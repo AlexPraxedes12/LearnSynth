@@ -10,11 +10,10 @@ class VideoPickerScreen extends StatelessWidget {
     return const FileTranscribeScreen(
       appBarTitle: 'Upload Video',
       buttonLabel: 'Choose Video',
-      fileTypeGroup: XTypeGroup(
+      typeGroup: XTypeGroup(
         label: 'Video',
         extensions: ['mp4', 'mov', 'mkv', 'avi', 'webm'],
       ),
-      enableStudyPack: true,
     );
   }
 }

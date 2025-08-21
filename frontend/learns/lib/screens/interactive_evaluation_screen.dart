@@ -15,8 +15,8 @@ class InteractiveEvaluationScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final exercises =
-        context.watch<ContentProvider>().evaluationQuestions;
+    final p = context.watch<ContentProvider>();
+    final exercises = p.studyPack == null ? const [] : p.safeList(p.studyPack!, 'quiz');
     return Scaffold(
       appBar: AppBar(title: const Text('Interactive Evaluation')),
       body: Padding(
@@ -29,15 +29,15 @@ class InteractiveEvaluationScreen extends StatelessWidget {
                   itemCount: exercises.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 16),
                   itemBuilder: (context, index) {
-                    final ex = exercises[index];
+                    final ex = (exercises[index] as Map?) ?? {};
                     if (ex.containsKey('choices')) {
                       return QuizQuestionCard(
-                        question: ex['question'] ?? '',
+                        question: ex['question']?.toString() ?? '',
                         choices: List<String>.from(ex['choices'] ?? const []),
                         correctIndex: ex['correctIndex'] as int? ?? 0,
                       );
                     }
-                    return KeyValueCard(data: ex);
+                    return KeyValueCard(data: Map<String, dynamic>.from(ex));
                   },
                 ),
               )
@@ -55,8 +55,7 @@ class InteractiveEvaluationScreen extends StatelessWidget {
             const SizedBox(height: 16),
             WideButton(
               label: 'Complete Session',
-              onPressed: () =>
-                  Navigator.pushNamed(context, Routes.progress),
+              onPressed: () => Navigator.pushNamed(context, Routes.progress),
             ),
           ],
         ),
@@ -64,4 +63,3 @@ class InteractiveEvaluationScreen extends StatelessWidget {
     );
   }
 }
-

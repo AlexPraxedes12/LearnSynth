@@ -9,7 +9,6 @@ import '../widgets/key_value_card.dart';
 /// Provides a deep understanding session. Users can listen to an
 /// audio explanation and view a concept map. Upon completion, they
 /// navigate to the progress screen using a named route (not
-
 /// replacement) to preserve navigation history.
 class DeepUnderstandingScreen extends StatelessWidget {
   const DeepUnderstandingScreen({super.key});
@@ -17,8 +16,8 @@ class DeepUnderstandingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<ContentProvider>();
-    final conceptMap = provider.conceptMap;
-    final links = (conceptMap?['links'] as List?);
+    final pack = provider.studyPack;
+    final links = pack == null ? const [] : provider.safeList(pack, 'concept_map');
 
     return Scaffold(
       appBar: AppBar(title: const Text('Deep Understanding')),
@@ -27,15 +26,14 @@ class DeepUnderstandingScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (links != null && links.isNotEmpty)
+            if (links.isNotEmpty)
               Expanded(
                 child: ListView.separated(
                   itemCount: links.length,
-                  separatorBuilder: (context, index) =>
-                      const SizedBox(height: 16),
+                  separatorBuilder: (context, index) => const SizedBox(height: 16),
                   itemBuilder: (context, index) {
-                    final link = links[index] as Map<String, dynamic>;
-                    return KeyValueCard(data: link);
+                    final link = (links[index] as Map?) ?? {};
+                    return KeyValueCard(data: Map<String, dynamic>.from(link));
                   },
                 ),
               )
@@ -52,4 +50,3 @@ class DeepUnderstandingScreen extends StatelessWidget {
     );
   }
 }
-
