@@ -21,32 +21,33 @@ class FileTranscribeScreen extends StatefulWidget {
 
 class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
   File? _picked;
-  String? _transcript;
+  String? _result;
   bool _busy = false;
-
   final _svc = TranscriptionService();
 
   Future<void> _pick() async {
-    final xFile = await openFile(acceptedTypeGroups: [widget.fileTypeGroup]);
-    if (xFile == null) return;
+    final x = await openFile(acceptedTypeGroups: [widget.fileTypeGroup]);
+    if (x == null) return;
     setState(() {
-      _picked = File(xFile.path);
-      _transcript = null;
+      _picked = File(x.path);
+      _result = null;
     });
   }
 
   Future<void> _run() async {
-    if (_picked == null) return;
+    final f = _picked;
+    if (f == null) return;
     setState(() => _busy = true);
-    final text = await _svc.transcribeFile(_picked!);
+    final out = await _svc.sendFile(f);
     setState(() {
-      _transcript = text;
+      _result = out;
       _busy = false;
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    final isErr = (_result ?? '').startsWith('Error:');
     return Scaffold(
       appBar: AppBar(title: Text(widget.appBarTitle)),
       body: Padding(
@@ -58,10 +59,14 @@ class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
             Text(_picked!.path, style: const TextStyle(fontSize: 12, color: Colors.white70)),
             const SizedBox(height: 16),
           ],
-          if (_transcript != null) ...[
-            const Text('Transcript:', style: TextStyle(fontWeight: FontWeight.bold)),
+          if (_result != null) ...[
+            const Text('Result:', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            Expanded(child: SingleChildScrollView(child: Text(_transcript!))),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Text(_result!, style: TextStyle(color: isErr ? Colors.red : null)),
+              ),
+            ),
             const SizedBox(height: 16),
           ] else
             const Spacer(),
