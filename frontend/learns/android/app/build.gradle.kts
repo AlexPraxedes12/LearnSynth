@@ -1,12 +1,12 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    // The Flutter Gradle plugin must be applied after the Android and Kotlin plugins.
+    // The Flutter Gradle plugin must be applied AFTER the Android and Kotlin plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
 
 android {
-    // Use the existing values if the project already has a different namespace/appId.
+    // If the project already has different values, KEEP those same values.
     namespace = "com.example.learns"
     compileSdk = 35
     ndkVersion = "27.0.12077973"
