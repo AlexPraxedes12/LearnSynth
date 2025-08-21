@@ -44,6 +44,8 @@ class ContentProvider extends ChangeNotifier {
   // Getters
   String? get content => _content;
   String? get raw => _raw;
+  /// Text to send to the analyzer (prefer raw, fallback to content).
+  String? get rawText => _raw ?? _content;
   bool get analyzing => _analyzing;
   String? get error => _error;
   Map<String, dynamic>? get studyPack => _studyPack;
@@ -161,8 +163,10 @@ class ContentProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setTranscript(String text) {
-    _content = text;
+  /// Call this after a successful transcription.
+  void setTranscript(String text, {String? filename}) {
+    _raw = text;        // keep the raw input
+    _content ??= text;  // initialize content if not set yet
     _error = null;
     notifyListeners();
   }
@@ -188,7 +192,7 @@ class ContentProvider extends ChangeNotifier {
   }
 
   Future<void> runAnalysis({required StudyMode mode}) async {
-    if (_content == null || _content!.trim().isEmpty) return;
+    if (rawText == null || rawText!.trim().isEmpty) return;
 
     _analyzing = true;
     _error = null;
@@ -199,7 +203,7 @@ class ContentProvider extends ChangeNotifier {
       final resp = await http.post(
         uri,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'text': _content, 'mode': mode.name}),
+        body: jsonEncode({'text': rawText, 'mode': mode.name}),
       );
 
       if (resp.statusCode >= 200 && resp.statusCode < 300) {
