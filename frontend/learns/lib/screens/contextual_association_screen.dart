@@ -14,7 +14,10 @@ class ContextualAssociationScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final exercises = context.watch<ContentProvider>().contextualExercises;
+    final pack = context.watch<ContentProvider>().studyPack;
+    final exercises = (pack?['contextual_association'] is List)
+        ? List<Map<String, dynamic>>.from(pack!['contextual_association'])
+        : const [];
     return Scaffold(
       appBar: AppBar(title: const Text('Contextual Association')),
       body: Padding(
