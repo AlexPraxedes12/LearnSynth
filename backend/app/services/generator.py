@@ -19,9 +19,22 @@ logger = logging.getLogger(__name__)
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
 OPENAI_TRANSCRIBE_MODEL = os.getenv("OPENAI_TRANSCRIBE_MODEL", "whisper-1")
-MAX_MEDIA_BYTES = int(os.getenv("MAX_MEDIA_BYTES", str(100 * 1024 * 1024)))  # 100MB default
+MAX_MEDIA_BYTES = int(os.getenv("MAX_MEDIA_BYTES", str(100 * 1024 * 1024)))
 
 client = OpenAI(api_key=OPENAI_API_KEY, base_url=OPENAI_BASE_URL)
+
+def _validate_stt_base_url():
+    # Warn (do NOT crash) if pointing to a non-official server (OSS usually lacks /v1/audio/transcriptions)
+    if OPENAI_BASE_URL.rstrip("/") != "https://api.openai.com/v1":
+        logger.warning(
+            "OPENAI_BASE_URL is %s (non-official). Most OSS servers do NOT support /v1/audio/transcriptions. "
+            "Use https://api.openai.com/v1 for Whisper.",
+            OPENAI_BASE_URL,
+        )
+    if not OPENAI_API_KEY:
+        logger.warning("OPENAI_API_KEY is empty; transcription will fail with 401.")
+
+_validate_stt_base_url()
 logger.info("Transcription model=%s base_url=%s", OPENAI_TRANSCRIBE_MODEL, OPENAI_BASE_URL)
 logger.info("MAX_MEDIA_BYTES=%s", MAX_MEDIA_BYTES)
 
@@ -49,24 +62,31 @@ def _extract_audio_to_tmp(video_upload_file, ext=".mp3"):
     return out_path
 
 
-def transcribe_audio(file: UploadFile = File(...)) -> str:
+def transcribe_audio(file):
     _ensure_size_ok(file)
     try:
         file.file.seek(0)
         resp = client.audio.transcriptions.create(
             model=OPENAI_TRANSCRIBE_MODEL,
-            file=file.file
+            file=file.file,
         )
         text = getattr(resp, "text", None) or (resp.get("text") if isinstance(resp, dict) else None)
         if not text:
             raise RuntimeError("Empty transcription")
         return text.strip()
     except Exception as exc:
+        msg = str(exc)
+        if "Connection refused" in msg or "APIConnectionError" in msg:
+            raise HTTPException(status_code=502, detail=f"Transcription backend not reachable at {OPENAI_BASE_URL}")
+        if "401" in msg or "Unauthorized" in msg:
+            raise HTTPException(status_code=401, detail="Invalid or missing OPENAI_API_KEY")
+        if "429" in msg or "Rate limit" in msg:
+            raise HTTPException(status_code=429, detail="Transcription rate limited; please retry")
         logger.exception("Transcription failed")
         raise HTTPException(status_code=500, detail="Transcription failed")
 
 
-def transcribe_video(file: UploadFile = File(...)) -> str:
+def transcribe_video(file):
     _ensure_size_ok(file)
     try:
         audio_path = _extract_audio_to_tmp(file, ext=".mp3")
@@ -76,7 +96,14 @@ def transcribe_video(file: UploadFile = File(...)) -> str:
         if not text:
             raise RuntimeError("Empty transcription")
         return text.strip()
-    except Exception:
+    except Exception as exc:
+        msg = str(exc)
+        if "Connection refused" in msg or "APIConnectionError" in msg:
+            raise HTTPException(status_code=502, detail=f"Transcription backend not reachable at {OPENAI_BASE_URL}")
+        if "401" in msg or "Unauthorized" in msg:
+            raise HTTPException(status_code=401, detail="Invalid or missing OPENAI_API_KEY")
+        if "429" in msg or "Rate limit" in msg:
+            raise HTTPException(status_code=429, detail="Transcription rate limited; please retry")
         logger.exception("Transcription failed")
         raise HTTPException(status_code=500, detail="Transcription failed")
 

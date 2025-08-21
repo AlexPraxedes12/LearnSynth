@@ -8,5 +8,8 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - MAX_MEDIA_BYTES=104857600   # 100 MB
+      - LLM_PROVIDER=${LLM_PROVIDER:-anthropic}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}          # read from host/.env at runtime
+      - OPENAI_BASE_URL=https://api.openai.com/v1
       - OPENAI_TRANSCRIBE_MODEL=whisper-1
+      - MAX_MEDIA_BYTES=104857600                 # 100 MB
