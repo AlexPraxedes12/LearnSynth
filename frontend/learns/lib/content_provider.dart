@@ -8,7 +8,7 @@ enum StudyMode {
   memorization,
   deep_understanding,
   contextual_association,
-  interactive_evaluation
+  interactive_evaluation,
 }
 
 /// Simple model representing a piece of study content. Either [content]
@@ -22,14 +22,28 @@ class ContentItem {
 
 /// Stores the content added by the user so it can be accessed across screens.
 class ContentProvider extends ChangeNotifier {
-  // --- Core text/analysis state ---
-  String? _content; // processed text used across the study flow (the transcript)
-  String? _raw; // raw text (optional)
-  String? _error;
-  bool _analyzing = false;
-  Map<String, dynamic>? _studyPack;
+  // ---------------------------------------------------------------------------
+  // Core text/analysis state
+  // ---------------------------------------------------------------------------
 
-  // --- Legacy fields kept for wider app compatibility ---
+  /// Cleaned or processed content used throughout the study flow (transcript)
+  String? transcript;
+
+  /// Raw text before any processing (can mirror transcript for now)
+  String? rawText;
+
+  /// Normalized analysis result (summary, topics, flashcards, quiz, etc.)
+  Map<String, dynamic>? analysis;
+
+  /// Busy flag for running analysis
+  bool isAnalyzing = false;
+
+  /// Error message from analysis/transcription
+  String? error;
+
+  // ---------------------------------------------------------------------------
+  // Legacy fields kept for wider app compatibility
+  // ---------------------------------------------------------------------------
   String? filePath;
   String? summary;
   List<String> topics = [];
@@ -41,35 +55,45 @@ class ContentProvider extends ChangeNotifier {
   Map<String, dynamic> progress = {};
   final List<ContentItem> _saved = [];
 
-  // Getters
-  String? get content => _content;
-  String? get raw => _raw;
-  /// Text to send to the analyzer (prefer raw, fallback to content).
-  String? get rawText => _raw ?? _content;
-  bool get analyzing => _analyzing;
-  String? get error => _error;
-  Map<String, dynamic>? get studyPack => _studyPack;
+  // ---------------------------------------------------------------------------
+  // Legacy getters to remain compatible with older code
+  // ---------------------------------------------------------------------------
+  String? get content => transcript;
+  String? get raw => rawText;
+  bool get analyzing => isAnalyzing;
+  Map<String, dynamic>? get studyPack => analysis;
   List<ContentItem> get savedContent => List.unmodifiable(_saved);
 
-  // --- Content management helpers (legacy) ---
+  bool get hasTranscript => (transcript != null && transcript!.trim().isNotEmpty);
+
+  // ---------------------------------------------------------------------------
+  // Content management helpers
+  // ---------------------------------------------------------------------------
   void setContent(String value) {
-    _content = value;
-    _raw = value;
+    setTranscript(value);
     filePath = null;
     _saved.add(ContentItem(content: value));
     notifyListeners();
   }
 
+  /// Update transcript/rawText after transcription completes.
+  void setTranscript(String value) {
+    transcript = value;
+    rawText = value;
+    error = null;
+    notifyListeners();
+  }
+
   void setPdfPath(String path) {
     filePath = path;
-    _content = null;
+    transcript = null;
     _saved.add(ContentItem(filePath: path));
     notifyListeners();
   }
 
   void setAudioPath(String path) {
     filePath = path;
-    _content = null;
+    transcript = null;
     _saved.add(ContentItem(filePath: path));
     notifyListeners();
   }
@@ -78,23 +102,23 @@ class ContentProvider extends ChangeNotifier {
   /// a [File] object instead of just a path.
   void setAudioFile(File file) {
     filePath = file.path;
-    _content = null;
+    transcript = null;
     _saved.add(ContentItem(filePath: file.path));
     notifyListeners();
   }
 
   void setVideoPath(String path) {
     filePath = path;
-    _content = null;
+    transcript = null;
     _saved.add(ContentItem(filePath: path));
     notifyListeners();
   }
 
   /// Store both [path] and [content] for the same content item.
-  /// The raw text is kept in [_raw] so it can be processed later.
+  /// The raw text is kept in [rawText] so it can be processed later.
   void setFileContent({required String path, required String content}) {
-    _raw = content;
-    _content = content;
+    rawText = content;
+    transcript = content;
     filePath = path;
     final index = _saved.lastIndexWhere((item) => item.filePath == path);
     final item = ContentItem(content: content, filePath: path);
@@ -152,78 +176,88 @@ class ContentProvider extends ChangeNotifier {
     }
   }
 
-  // --- New methods for transcript analysis ---
+  // ---------------------------------------------------------------------------
+  // New methods for transcript analysis
+  // ---------------------------------------------------------------------------
 
   void clear() {
-    _content = null;
-    _raw = null;
-    _error = null;
-    _studyPack = null;
-    _analyzing = false;
+    transcript = null;
+    rawText = null;
+    error = null;
+    analysis = null;
+    isAnalyzing = false;
     notifyListeners();
   }
 
-  /// Call this after a successful transcription.
-  void setTranscript(String text, {String? filename}) {
-    _raw = text;        // keep the raw input
-    _content ??= text;  // initialize content if not set yet
-    _error = null;
-    notifyListeners();
-  }
+  /// Normalize backend responses to a stable shape.
+  /// Handles:
+  /// - { ...fields } or { data: { ...fields } } or [ { ...fields } ]
+  /// - summary: string? or nested
+  /// - topics: list?
+  Map<String, dynamic> _normalize(dynamic json) {
+    dynamic root = json;
 
-  Map<String, dynamic> _normalizePack(dynamic decoded) {
-    // If backend returned a List, wrap it:
-    if (decoded is List) return {'items': decoded};
-
-    // If backend returned a Map, but 'data' is a List, lift it to 'items'
-    if (decoded is Map) {
-      final map = Map<String, dynamic>.from(decoded);
-      final data = map['data'];
-      if (data is List) {
-        return {
-          ...map,
-          'items': data,
-        };
-      }
-      return map;
+    if (root is Map && root['data'] != null) {
+      root = root['data'];
     }
-    // Fallback: coerce to text
-    return {'text': decoded?.toString() ?? ''};
+    if (root is List && root.isNotEmpty) {
+      root = root.first;
+    }
+    if (root is! Map) {
+      return <String, dynamic>{};
+    }
+
+    final map = Map<String, dynamic>.from(root);
+
+    final summaryNorm = map['summary'] is String
+        ? map['summary'] as String
+        : (map['summary']?.toString() ?? '');
+    final topicsRaw = map['topics'];
+    final topicsNorm = (topicsRaw is List)
+        ? topicsRaw.map((e) => e.toString()).toList()
+        : <String>[];
+
+    return <String, dynamic>{
+      ...map,
+      'summary': summaryNorm,
+      'topics': topicsNorm,
+    };
   }
 
-  Future<void> runAnalysis({required StudyMode mode}) async {
-    if (rawText == null || rawText!.trim().isEmpty) return;
+  /// Calls the backend to analyze the text and stores a normalized result.
+  Future<void> runAnalysis({String baseUrl = 'http://10.0.2.2:8000'}) async {
+    final payloadText = (rawText?.trim().isNotEmpty ?? false)
+        ? rawText!.trim()
+        : (transcript ?? '').trim();
 
-    _analyzing = true;
-    _error = null;
+    if (payloadText.isEmpty) {
+      // nothing to analyze
+      return;
+    }
+
+    isAnalyzing = true;
     notifyListeners();
 
     try {
-      final uri = Uri.parse('http://localhost:8000/analyze');
+      final uri = Uri.parse('$baseUrl/analyze');
       final resp = await http.post(
         uri,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'text': rawText, 'mode': mode.name}),
+        headers: const {'Content-Type': 'application/json'},
+        body: jsonEncode({'text': payloadText}),
       );
 
       if (resp.statusCode >= 200 && resp.statusCode < 300) {
-        final decoded = jsonDecode(utf8.decode(resp.bodyBytes));
-        _studyPack = _normalizePack(decoded);
+        final decoded = jsonDecode(resp.body);
+        analysis = _normalize(decoded);
+        summary = analysis?['summary'] as String? ?? '';
+        topics = (analysis?['topics'] as List?)?.map((e) => e.toString()).toList() ?? [];
+        notifyListeners();
       } else {
-        _error = 'Analysis failed (${resp.statusCode})';
+        throw Exception('Analyze failed: ${resp.statusCode} ${resp.body}');
       }
-    } catch (e) {
-      _error = 'Analysis error: $e';
     } finally {
-      _analyzing = false;
+      isAnalyzing = false;
       notifyListeners();
     }
   }
-
-  String safeString(Map<String, dynamic> m, String key) =>
-      (m[key] is String) ? (m[key] as String) : '';
-
-  List<dynamic> safeList(Map<String, dynamic> m, String key) =>
-      (m[key] is List) ? (m[key] as List) : const [];
 }
-
