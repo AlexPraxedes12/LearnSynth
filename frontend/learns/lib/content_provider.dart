@@ -1,236 +1,90 @@
 import 'dart:convert';
-import 'dart:io';
-
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
-enum StudyMode {
-  memorization,
-  deep_understanding,
-  contextual_association,
-  interactive_evaluation
-}
+enum StudyMode { memorization, deep_understanding, contextual_association, interactive_evaluation }
 
-/// Simple model representing a piece of study content. Either [content]
-/// or [filePath] will be provided depending on how the content was
-/// added.
-class ContentItem {
-  final String? content;
-  final String? filePath;
-  const ContentItem({this.content, this.filePath});
-}
-
-/// Stores the content added by the user so it can be accessed across screens.
 class ContentProvider extends ChangeNotifier {
-  /// Cleaned or processed content used throughout the study flow.
-  String? content;
-
-  /// Raw text extracted from uploaded files before any processing.
-  String? rawText;
-
-  String? filePath;
-  String? summary;
-  List<String> topics = [];
-  List<Map<String, String>> flashcards = [];
-  Map<String, dynamic>? conceptMap;
-  List<Map<String, dynamic>> contextualExercises = [];
-  List<Map<String, dynamic>> evaluationQuestions = [];
-  Map<String, String> activitySummaries = {};
-
-  /// Cached statistics about the user's study progress.
-  Map<String, dynamic> progress = {};
-  final List<ContentItem> _saved = [];
-
-  /// Transcription and analysis state
-  String? transcript;
-  StudyMode mode = StudyMode.memorization;
+  String? _content;          // processed text used across the study flow (the transcript)
+  String? _raw;              // raw text (optional)
+  String? _error;
+  bool _analyzing = false;
   Map<String, dynamic>? _studyPack;
+
+  // Getters:
+  String? get content => _content;
+  String? get raw => _raw;
+  bool get analyzing => _analyzing;
+  String? get error => _error;
   Map<String, dynamic>? get studyPack => _studyPack;
-  bool loading = false;
-  String? error;
 
-  /// List of all content pieces added by the user.
-  List<ContentItem> get savedContent => List.unmodifiable(_saved);
-
-  void setContent(String value) {
-    content = value;
-    rawText = value;
-    filePath = null;
-    _saved.add(ContentItem(content: value));
+  void clear() {
+    _content = null;
+    _raw = null;
+    _error = null;
+    _studyPack = null;
+    _analyzing = false;
     notifyListeners();
   }
 
-  void setPdfPath(String path) {
-    filePath = path;
-    content = null;
-    _saved.add(ContentItem(filePath: path));
+  void setTranscript(String text) {
+    _content = text;
+    _error = null;
     notifyListeners();
   }
 
-  void setAudioPath(String path) {
-    filePath = path;
-    content = null;
-    _saved.add(ContentItem(filePath: path));
-    notifyListeners();
-  }
+  Map<String, dynamic> _normalizePack(dynamic decoded) {
+    // If backend returned a List, wrap it:
+    if (decoded is List) return {'items': decoded};
 
-  /// Store an audio [file]. Useful when a recording or picker returns
-  /// a [File] object instead of just a path.
-  void setAudioFile(File file) {
-    filePath = file.path;
-    content = null;
-    _saved.add(ContentItem(filePath: file.path));
-    notifyListeners();
-  }
-
-  void setVideoPath(String path) {
-    filePath = path;
-    content = null;
-    _saved.add(ContentItem(filePath: path));
-    notifyListeners();
-  }
-
-  /// Store both [path] and [content] for the same content item.
-  /// The raw text is kept in [rawText] so it can be processed later.
-  void setFileContent({required String path, required String content}) {
-    rawText = content;
-    this.content = content;
-    filePath = path;
-    final index = _saved.lastIndexWhere((item) => item.filePath == path);
-    final item = ContentItem(content: content, filePath: path);
-    if (index != -1) {
-      _saved[index] = item;
-    } else {
-      _saved.add(item);
+    // If backend returned a Map, but 'data' is a List, lift it to 'items'
+    if (decoded is Map) {
+      final map = Map<String, dynamic>.from(decoded);
+      final data = map['data'];
+      if (data is List) {
+        return {
+          ...map,
+          'items': data,
+        };
+      }
+      return map;
     }
-    notifyListeners();
+    // Fallback: coerce to text
+    return {'text': decoded?.toString() ?? ''};
   }
 
-  void setAnalysis(String summaryText, List<String> topicsList) {
-    summary = summaryText;
-    topics = topicsList;
-    notifyListeners();
-  }
+  Future<void> runAnalysis({required StudyMode mode}) async {
+    if (_content == null || _content!.trim().isEmpty) return;
 
-  void setFlashcards(List<Map<String, String>> cards) {
-    flashcards = cards;
-    notifyListeners();
-  }
-
-  void setConceptMap(Map<String, dynamic> map) {
-    conceptMap = map;
-    notifyListeners();
-  }
-
-  void setContextualExercises(List<Map<String, dynamic>> list) {
-    contextualExercises = list;
-    notifyListeners();
-  }
-
-  void setEvaluationQuestions(List<Map<String, dynamic>> list) {
-    evaluationQuestions = list;
-    notifyListeners();
-  }
-
-  void setActivitySummaries(Map<String, String> summaries) {
-    activitySummaries = summaries;
-    notifyListeners();
-  }
-
-  // --- New methods for transcript analysis ---
-  void setTranscript(String t) {
-    transcript = t;
-    content = t;
-    notifyListeners();
-  }
-
-  void setMode(StudyMode m) {
-    mode = m;
-    notifyListeners();
-  }
-
-  Future<void> runAnalysis() async {
-    final t = transcript?.trim();
-    if (t == null || t.isEmpty) {
-      error = 'No transcript available';
-      notifyListeners();
-      return;
-    }
-    loading = true;
-    error = null;
+    _analyzing = true;
+    _error = null;
     notifyListeners();
 
     try {
-      final uri = Uri.parse('http://10.0.2.2:8000/analyze');
-      final resp = await http.post(uri,
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({'text': t, 'mode': mode.name}));
-      if (resp.statusCode != 200) {
-        throw FormatException(
-            'Analyze failed (${resp.statusCode}): ${resp.body}');
-      }
+      final uri = Uri.parse('http://localhost:8000/analyze');
+      final resp = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'text': _content, 'mode': mode.name}),
+      );
 
-      dynamic decoded;
-      try {
-        decoded = jsonDecode(resp.body);
-      } catch (e) {
-        throw FormatException('Invalid JSON: ${e.toString()}');
-      }
-
-      if (decoded is List) {
-        if (decoded.isEmpty) {
-          throw const FormatException('Empty array response');
-        }
-        decoded = decoded.first;
-      }
-
-      if (decoded is Map<String, dynamic>) {
-        if (decoded['data'] is Map) {
-          decoded = Map<String, dynamic>.from(decoded['data'] as Map);
-        } else {
-          decoded = Map<String, dynamic>.from(decoded);
-        }
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        final decoded = jsonDecode(utf8.decode(resp.bodyBytes));
+        _studyPack = _normalizePack(decoded);
       } else {
-        throw FormatException('Unexpected response type: ${decoded.runtimeType}');
+        _error = 'Analysis failed (${resp.statusCode})';
       }
-
-      _studyPack = decoded;
-      summary = decoded['summary'] as String?;
-      flashcards = (decoded['flashcards'] as List?)
-              ?.cast<Map<String, dynamic>>()
-              .map<Map<String, String>>((e) =>
-                  e.map((key, value) => MapEntry(key, value.toString())))
-              .toList() ??
-          [];
-      evaluationQuestions =
-          (decoded['quiz'] as List?)?.cast<Map<String, dynamic>>() ?? [];
-      conceptMap = decoded['concept_map'] as Map<String, dynamic>?;
-      contextualExercises =
-          (decoded['contextual_association'] as List?)
-                  ?.cast<Map<String, dynamic>>() ??
-              [];
     } catch (e) {
-      error = e.toString();
-      rethrow;
+      _error = 'Analysis error: $e';
     } finally {
-      loading = false;
+      _analyzing = false;
       notifyListeners();
     }
   }
 
-  /// Update the locally cached [progress] data.
-  void setProgress(Map<String, dynamic> prog) {
-    progress = prog;
-    notifyListeners();
-  }
+  String safeString(Map<String, dynamic> m, String key) =>
+      (m[key] is String) ? (m[key] as String) : '';
 
-  /// Optional helper to retrieve saved content from storage if the list
-  /// is empty. The current implementation simply acts as a placeholder
-  /// for future persistence logic.
-  Future<void> fetchSavedContentIfNeeded() async {
-    if (_saved.isEmpty) {
-      // TODO: load items from local storage or backend
-    }
-  }
+  List<dynamic> safeList(Map<String, dynamic> m, String key) =>
+      (m[key] is List) ? (m[key] as List) : const [];
 }
-

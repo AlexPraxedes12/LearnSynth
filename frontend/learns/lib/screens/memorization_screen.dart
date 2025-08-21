@@ -14,7 +14,8 @@ class MemorizationScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cards = context.watch<ContentProvider>().flashcards;
+    final p = context.watch<ContentProvider>();
+    final cards = p.studyPack == null ? const [] : p.safeList(p.studyPack!, 'flashcards');
     return Scaffold(
       appBar: AppBar(title: const Text('Memorization')),
       body: Padding(
@@ -27,10 +28,11 @@ class MemorizationScreen extends StatelessWidget {
                   itemCount: cards.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 16),
                   itemBuilder: (context, index) {
-                    final c = cards[index];
+                    final c = (cards[index] as Map?) ?? {};
                     return FlashcardWidget(
-                      question: c['question'] ?? '',
-                      answer: c['answer'] ?? '',
+                      question: c['question']?.toString() ?? c['term']?.toString() ?? '',
+                      answer:
+                          c['answer']?.toString() ?? c['definition']?.toString() ?? '',
                     );
                   },
                 ),
@@ -40,8 +42,7 @@ class MemorizationScreen extends StatelessWidget {
             const SizedBox(height: 16),
             WideButton(
               label: 'Complete Session',
-              onPressed: () =>
-                  Navigator.pushNamed(context, Routes.progress),
+              onPressed: () => Navigator.pushNamed(context, Routes.progress),
             ),
           ],
         ),
@@ -49,4 +50,3 @@ class MemorizationScreen extends StatelessWidget {
     );
   }
 }
-
