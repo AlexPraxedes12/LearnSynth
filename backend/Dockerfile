@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpango-1.0-0 \
     libgdk-pixbuf-2.0-0 \
     poppler-utils \
+    ffmpeg \
     tesseract-ocr \
     && rm -rf /var/lib/apt/lists/*
 
