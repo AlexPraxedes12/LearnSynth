@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../content_provider.dart';
 import '../services/transcription_service.dart';
+import '../widgets/wide_button.dart';
 import 'analysis_screen.dart';
 
 class FileTranscribeScreen extends StatefulWidget {
@@ -27,7 +28,6 @@ class FileTranscribeScreen extends StatefulWidget {
 
 class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
   File? _picked;
-  String? _result;
   String? _error;
   bool _busy = false;
   bool _analyzing = false;
@@ -41,7 +41,6 @@ class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
     if (!mounted) return;
     setState(() {
       _picked = File(x.path);
-      _result = null;
     });
   }
 
@@ -70,7 +69,6 @@ class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
     if (!mounted) return;
     setState(() {
       _busy = false;
-      _result = out;
     });
 
     // Persist transcript in Provider for later analysis
@@ -81,8 +79,10 @@ class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
     if (_analyzing) return;
     setState(() => _analyzing = true);
 
+    final provider = context.read<ContentProvider>();
+    provider.setMode(StudyMode.memorization);
     try {
-      await context.read<ContentProvider>().runAnalysis();
+      await provider.runAnalysis();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -95,15 +95,18 @@ class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
     if (!mounted) return;
     setState(() => _analyzing = false);
 
-    // Navigate only if still mounted
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const AnalysisScreen()),
-    );
+    if (provider.error == null && mounted) {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const AnalysisScreen()),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final canTranscribe = !_busy && _picked != null && _result == null;
+    final p = context.watch<ContentProvider>();
+    final hasTranscript = p.content?.isNotEmpty ?? false;
+    final canTranscribe = !_busy && _picked != null && !hasTranscript;
 
     return Scaffold(
       appBar: AppBar(title: Text(widget.appBarTitle)),
@@ -126,34 +129,27 @@ class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
             const Spacer(),
 
             // Choose File (always enabled unless busy/analyzing)
-            ElevatedButton(
+            WideButton(
+              label: widget.buttonLabel,
               onPressed: _busy || _analyzing ? null : _pick,
-              child: Text(widget.buttonLabel),
+              primary: false,
             ),
             const SizedBox(height: 12),
 
             // If there is NO transcript yet -> show Transcribe
-            if (_result == null)
-              ElevatedButton(
+            if (!hasTranscript)
+              WideButton(
+                label: 'Transcribe',
                 onPressed: canTranscribe ? _run : null,
-                child: _busy
-                    ? const SizedBox(
-                        height: 18,
-                        width: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Text('Transcribe'),
+                primary: true,
               ),
 
             // If there IS a transcript -> show Continue instead
-            if (_result != null)
-              ElevatedButton(
+            if (hasTranscript)
+              WideButton(
+                label: _analyzing ? 'Analyzing...' : 'Continue',
                 onPressed: _analyzing ? null : _continueToAnalysis,
-                child: _analyzing
-                    ? const SizedBox(
-                        height: 18,
-                        width: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Text('Continue'),
+                primary: true,
               ),
           ],
         ),

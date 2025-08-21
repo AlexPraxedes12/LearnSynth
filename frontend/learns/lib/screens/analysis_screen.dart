@@ -8,11 +8,12 @@ class AnalysisScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = context.watch<ContentProvider>();
-    final data = p.analysis ?? {};
+    final data = p.studyPack ?? {};
 
     final summary = data['summary'] as String? ?? '';
-    final flashcards = (data['flashcards'] as List?) ?? const [];
-    final quiz = (data['quiz'] as List?) ?? const [];
+    final flashcards =
+        (data['flashcards'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+    final quiz = (data['quiz'] as List?)?.cast<Map<String, dynamic>>() ?? [];
     final conceptMap = (data['concept_map'] as List?) ?? const [];
     final spaced = (data['spaced_repetition'] as List?) ?? const [];
 

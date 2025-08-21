@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../widgets/flashcard_widget.dart';
-import '../widgets/primary_button.dart';
+import '../widgets/wide_button.dart';
 import '../constants.dart';
 import '../content_provider.dart';
 
@@ -38,7 +38,7 @@ class MemorizationScreen extends StatelessWidget {
             else
               const Text('No flashcards generated'),
             const SizedBox(height: 16),
-            PrimaryButton(
+            WideButton(
               label: 'Complete Session',
               onPressed: () =>
                   Navigator.pushNamed(context, Routes.progress),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:provider/provider.dart';
-import '../widgets/primary_button.dart';
+import '../widgets/wide_button.dart';
 import '../theme/app_theme.dart';
 import '../constants.dart';
 import '../content_provider.dart';
@@ -67,7 +67,7 @@ class _TextInputScreenState extends State<TextInputScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            PrimaryButton(label: 'Continue', onPressed: _onContinuePressed),
+            WideButton(label: 'Continue', onPressed: _onContinuePressed),
           ],
         ),
       ),
