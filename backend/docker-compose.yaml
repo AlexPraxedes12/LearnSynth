@@ -9,3 +9,4 @@ services:
       - "8000:8000"
     environment:
       - MAX_MEDIA_BYTES=104857600   # 100 MB
+      - OPENAI_TRANSCRIBE_MODEL=whisper-1

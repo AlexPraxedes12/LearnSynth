@@ -1,11 +1,10 @@
-import os
-import logging
+import os, logging, tempfile, subprocess, shlex
 from fastapi import UploadFile, File, HTTPException
 from io import BytesIO
 import fitz  # PyMuPDF
 from pdf2image import convert_from_bytes
 import pytesseract
-import openai
+from openai import OpenAI
 
 from app.utils.llm import (
     ask_llm,
@@ -16,7 +15,14 @@ from app.utils.llm import (
 )
 
 logger = logging.getLogger(__name__)
-MAX_MEDIA_BYTES = int(os.getenv("MAX_MEDIA_BYTES", str(100 * 1024 * 1024)))  # 100 MB default
+
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
+OPENAI_TRANSCRIBE_MODEL = os.getenv("OPENAI_TRANSCRIBE_MODEL", "whisper-1")
+MAX_MEDIA_BYTES = int(os.getenv("MAX_MEDIA_BYTES", str(100 * 1024 * 1024)))  # 100MB default
+
+client = OpenAI(api_key=OPENAI_API_KEY, base_url=OPENAI_BASE_URL)
+logger.info("Transcription model=%s base_url=%s", OPENAI_TRANSCRIBE_MODEL, OPENAI_BASE_URL)
 logger.info("MAX_MEDIA_BYTES=%s", MAX_MEDIA_BYTES)
 
 
@@ -28,6 +34,51 @@ def _ensure_size_ok(upload_file):
     if size > MAX_MEDIA_BYTES:
         logger.info("File too large: %s bytes", size)
         raise HTTPException(status_code=400, detail="File too large")
+
+
+def _extract_audio_to_tmp(video_upload_file, ext=".mp3"):
+    # Requires ffmpeg in PATH (already in Docker image)
+    with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as out:
+        out_path = out.name
+    with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as src:
+        src_path = src.name
+        video_upload_file.file.seek(0)
+        src.write(video_upload_file.file.read())
+    cmd = f'ffmpeg -y -i {shlex.quote(src_path)} -vn -ac 1 -ar 16000 -b:a 64k {shlex.quote(out_path)}'
+    subprocess.run(shlex.split(cmd), check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return out_path
+
+
+def transcribe_audio(file: UploadFile = File(...)) -> str:
+    _ensure_size_ok(file)
+    try:
+        file.file.seek(0)
+        resp = client.audio.transcriptions.create(
+            model=OPENAI_TRANSCRIBE_MODEL,
+            file=file.file
+        )
+        text = getattr(resp, "text", None) or (resp.get("text") if isinstance(resp, dict) else None)
+        if not text:
+            raise RuntimeError("Empty transcription")
+        return text.strip()
+    except Exception as exc:
+        logger.exception("Transcription failed")
+        raise HTTPException(status_code=500, detail="Transcription failed")
+
+
+def transcribe_video(file: UploadFile = File(...)) -> str:
+    _ensure_size_ok(file)
+    try:
+        audio_path = _extract_audio_to_tmp(file, ext=".mp3")
+        with open(audio_path, "rb") as fh:
+            resp = client.audio.transcriptions.create(model=OPENAI_TRANSCRIBE_MODEL, file=fh)
+        text = getattr(resp, "text", None) or (resp.get("text") if isinstance(resp, dict) else None)
+        if not text:
+            raise RuntimeError("Empty transcription")
+        return text.strip()
+    except Exception:
+        logger.exception("Transcription failed")
+        raise HTTPException(status_code=500, detail="Transcription failed")
 
 
 def extract_text_with_ocr(pdf_data: bytes) -> str:
@@ -53,44 +104,6 @@ def extract_text_from_pdf(pdf_data: bytes) -> str:
         text = extract_text_with_ocr(pdf_data)
     return text
 
-
-def _transcribe_media(data: bytes, filename: str) -> str:
-    """Use Whisper to transcribe audio or video data into text."""
-    try:
-        file_like = BytesIO(data)
-        file_like.name = filename or "upload"
-        # Support both old and new OpenAI Python client interfaces
-        if hasattr(openai, "Audio") and hasattr(openai.Audio, "transcriptions"):
-            response = openai.Audio.transcriptions.create(
-                model="whisper-1", file=file_like
-            )
-        else:  # Fallback for legacy clients
-            response = openai.Audio.transcribe("whisper-1", file_like)
-
-        if isinstance(response, dict):
-            return response.get("text", "")
-        return getattr(response, "text", "")
-    except Exception as exc:
-        logger.exception("Transcription failed: %s", exc)
-        raise HTTPException(status_code=500, detail="Transcription failed")
-
-
-def transcribe_audio(file: UploadFile = File(...)) -> str:
-    """Transcribe an uploaded audio file using Whisper."""
-    _ensure_size_ok(file)
-    data = file.file.read()
-    size = len(data)
-    logger.info("Transcribing audio '%s' (%d bytes)", file.filename, size)
-    return _transcribe_media(data, file.filename or "audio")
-
-
-def transcribe_video(file: UploadFile = File(...)) -> str:
-    """Transcribe an uploaded video file using Whisper."""
-    _ensure_size_ok(file)
-    data = file.file.read()
-    size = len(data)
-    logger.info("Transcribing video '%s' (%d bytes)", file.filename, size)
-    return _transcribe_media(data, file.filename or "video")
 
 
 def generate_course(file: UploadFile = File(...)):
