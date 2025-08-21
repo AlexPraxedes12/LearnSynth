@@ -16,9 +16,12 @@ class DeepUnderstandingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<ContentProvider>();
-    final conceptMap = provider.conceptMap;
-    final links = (conceptMap?['links'] as List?);
+    final pack = context.watch<ContentProvider>().studyPack;
+    final conceptMap =
+        (pack?['concept_map'] is Map) ? pack!['concept_map'] as Map<String, dynamic> : null;
+    final links = (conceptMap?['links'] is List)
+        ? List<Map<String, dynamic>>.from(conceptMap!['links'])
+        : const [];
 
     return Scaffold(
       appBar: AppBar(title: const Text('Deep Understanding')),
@@ -27,14 +30,14 @@ class DeepUnderstandingScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (links != null && links.isNotEmpty)
+            if (links.isNotEmpty)
               Expanded(
                 child: ListView.separated(
                   itemCount: links.length,
                   separatorBuilder: (context, index) =>
                       const SizedBox(height: 16),
                   itemBuilder: (context, index) {
-                    final link = links[index] as Map<String, dynamic>;
+                    final link = links[index];
                     return KeyValueCard(data: link);
                   },
                 ),

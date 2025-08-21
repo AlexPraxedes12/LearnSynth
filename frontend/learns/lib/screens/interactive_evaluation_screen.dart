@@ -15,8 +15,10 @@ class InteractiveEvaluationScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final exercises =
-        context.watch<ContentProvider>().evaluationQuestions;
+    final pack = context.watch<ContentProvider>().studyPack;
+    final exercises = (pack?['quiz'] is List)
+        ? List<Map<String, dynamic>>.from(pack!['quiz'])
+        : const [];
     return Scaffold(
       appBar: AppBar(title: const Text('Interactive Evaluation')),
       body: Padding(

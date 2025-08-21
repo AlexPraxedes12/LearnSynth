@@ -14,7 +14,10 @@ class MemorizationScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cards = context.watch<ContentProvider>().flashcards;
+    final pack = context.watch<ContentProvider>().studyPack;
+    final cards = (pack?['flashcards'] is List)
+        ? List<Map<String, dynamic>>.from(pack!['flashcards'])
+        : const [];
     return Scaffold(
       appBar: AppBar(title: const Text('Memorization')),
       body: Padding(
@@ -29,8 +32,8 @@ class MemorizationScreen extends StatelessWidget {
                   itemBuilder: (context, index) {
                     final c = cards[index];
                     return FlashcardWidget(
-                      question: c['question'] ?? '',
-                      answer: c['answer'] ?? '',
+                      question: c['question']?.toString() ?? c['term']?.toString() ?? '',
+                      answer: c['answer']?.toString() ?? c['definition']?.toString() ?? '',
                     );
                   },
                 ),
