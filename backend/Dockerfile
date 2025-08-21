@@ -21,7 +21,7 @@ WORKDIR /app
 COPY . .
 
 # Install python dependencies
-RUN pip install --no-cache-dir fastapi uvicorn[standard] anthropic python-dotenv gtts \
+RUN pip install --no-cache-dir fastapi uvicorn[standard] anthropic openai requests python-dotenv gtts \
     spacy beautifulsoup4 weasyprint markdown graphviz
 
     
