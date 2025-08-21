@@ -10,7 +10,10 @@ class AudioPickerScreen extends StatelessWidget {
     return const FileTranscribeScreen(
       appBarTitle: 'Upload Audio',
       buttonLabel: 'Select Audio',
-      fileTypeGroup: XTypeGroup(label: 'Audio', extensions: ['mp3', 'm4a', 'wav', 'flac', 'ogg', 'aac']),
+      fileTypeGroup: XTypeGroup(
+        label: 'Audio',
+        extensions: ['mp3', 'm4a', 'wav', 'flac', 'ogg', 'aac'],
+      ),
     );
   }
 }
