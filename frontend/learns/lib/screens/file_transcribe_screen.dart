@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
-import 'package:path/path.dart' as p;
+import 'package:path/path.dart' as path;
 import 'package:provider/provider.dart';
 
 import '../content_provider.dart';
@@ -96,9 +96,9 @@ class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
     setState(() => _analyzing = false);
 
     if (provider.error == null && mounted) {
-      Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const AnalysisScreen()),
-      );
+      Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (_) => const AnalysisScreen()));
     }
   }
 
@@ -115,11 +115,15 @@ class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
         child: Column(
           children: [
             if (_picked != null) ...[
-              Text(p.basename(_picked!.path),
-                  style: const TextStyle(fontWeight: FontWeight.w600)),
+              Text(
+                path.basename(_picked!.path),
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
               const SizedBox(height: 4),
-              Text(_picked!.path,
-                  style: const TextStyle(fontSize: 12, color: Colors.white70)),
+              Text(
+                _picked!.path,
+                style: const TextStyle(fontSize: 12, color: Colors.white70),
+              ),
               const SizedBox(height: 16),
             ],
 
