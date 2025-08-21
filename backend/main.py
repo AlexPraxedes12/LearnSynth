@@ -30,8 +30,7 @@ class StudyRequest(BaseModel):
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-MAX_UPLOAD_SIZE = 100 * 1024 * 1024  # 100 MB
+MAX_MEDIA_BYTES = int(os.getenv("MAX_MEDIA_BYTES", str(100 * 1024 * 1024)))  # 100 MB default
 
 app = FastAPI()
 
@@ -43,8 +42,8 @@ async def upload_content(file: UploadFile = File(...)):
         file.file.seek(0, os.SEEK_END)
         size = file.file.tell()
         file.file.seek(0)
-        if size > MAX_UPLOAD_SIZE:
-            raise HTTPException(status_code=400, detail="File too large (max 100MB)")
+        if size > MAX_MEDIA_BYTES:
+            raise HTTPException(status_code=400, detail="File too large")
         content_type = (file.content_type or "").lower()
         ext = os.path.splitext(file.filename or "")[1].lower()
 
