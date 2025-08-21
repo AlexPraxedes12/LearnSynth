@@ -1,7 +1,8 @@
+import os
+import logging
 from fastapi import UploadFile, File, HTTPException
 from io import BytesIO
 import fitz  # PyMuPDF
-import logging
 from pdf2image import convert_from_bytes
 import pytesseract
 import openai
@@ -15,8 +16,18 @@ from app.utils.llm import (
 )
 
 logger = logging.getLogger(__name__)
+MAX_MEDIA_BYTES = int(os.getenv("MAX_MEDIA_BYTES", str(100 * 1024 * 1024)))  # 100 MB default
+logger.info("MAX_MEDIA_BYTES=%s", MAX_MEDIA_BYTES)
 
-MAX_SIZE = 5 * 1024 * 1024  # 5MB limit
+
+def _ensure_size_ok(upload_file):
+    # Works with FastAPI UploadFile
+    upload_file.file.seek(0, os.SEEK_END)
+    size = upload_file.file.tell()
+    upload_file.file.seek(0)
+    if size > MAX_MEDIA_BYTES:
+        logger.info("File too large: %s bytes", size)
+        raise HTTPException(status_code=400, detail="File too large")
 
 
 def extract_text_with_ocr(pdf_data: bytes) -> str:
@@ -66,32 +77,25 @@ def _transcribe_media(data: bytes, filename: str) -> str:
 
 def transcribe_audio(file: UploadFile = File(...)) -> str:
     """Transcribe an uploaded audio file using Whisper."""
+    _ensure_size_ok(file)
     data = file.file.read()
     size = len(data)
     logger.info("Transcribing audio '%s' (%d bytes)", file.filename, size)
-
-    if size > MAX_SIZE:
-        logger.error("File too large: %d bytes", size)
-        raise HTTPException(status_code=400, detail="File too large")
-
     return _transcribe_media(data, file.filename or "audio")
 
 
 def transcribe_video(file: UploadFile = File(...)) -> str:
     """Transcribe an uploaded video file using Whisper."""
+    _ensure_size_ok(file)
     data = file.file.read()
     size = len(data)
     logger.info("Transcribing video '%s' (%d bytes)", file.filename, size)
-
-    if size > MAX_SIZE:
-        logger.error("File too large: %d bytes", size)
-        raise HTTPException(status_code=400, detail="File too large")
-
     return _transcribe_media(data, file.filename or "video")
 
 
 def generate_course(file: UploadFile = File(...)):
     """Extract text from an uploaded file and generate a course."""
+    _ensure_size_ok(file)
     filename = (file.filename or '').lower()
     content_type = (file.content_type or '').lower()
 
@@ -99,10 +103,6 @@ def generate_course(file: UploadFile = File(...)):
     data = file.file.read()
     size = len(data)
     logger.info("Processing file '%s' (%d bytes)", filename, size)
-
-    if size > MAX_SIZE:
-        logger.error("File too large: %d bytes", size)
-        raise HTTPException(status_code=400, detail="File too large")
 
     # Handle plain text files
     if filename.endswith('.txt') and 'text/plain' in content_type:
