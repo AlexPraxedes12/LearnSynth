@@ -7,7 +7,7 @@ import 'package:provider/provider.dart';
 
 import '../content_provider.dart';
 import '../services/transcription_service.dart';
-import '../widgets/wide_button.dart';
+import '../widgets/primary_button.dart';
 import 'analysis_screen.dart';
 
 class FileTranscribeScreen extends StatefulWidget {
@@ -27,12 +27,11 @@ class FileTranscribeScreen extends StatefulWidget {
 
 class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
   bool _busy = false;
+  bool _analyzing = false;
   String? _error;
   File? _picked;
 
   final _svc = TranscriptionService();
-
-  ContentProvider get _provider => context.read<ContentProvider>();
 
   @override
   void initState() {
@@ -40,12 +39,47 @@ class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
     _picked = widget.file;
   }
 
+  Future<void> _run() async {
+    if (_picked == null || _busy) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final out = await _svc.sendFile(_picked!);
+      if (!mounted) return;
+      context.read<ContentProvider>().setTranscript(out);
+    } catch (e) {
+      setState(() => _error = 'Transcription failed: $e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _continue() async {
+    if (!mounted) return;
+    final provider = context.read<ContentProvider>();
+    try {
+      setState(() => _analyzing = true);
+      await provider.runAnalysis(); // stores provider.analysis
+      if (!mounted) return;
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const AnalysisScreen()),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Analysis failed: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _analyzing = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final hasTranscript =
-        context.select<ContentProvider, bool>((p) => (p.content?.isNotEmpty ?? false));
-    final String cta = hasTranscript ? 'Continue' : 'Transcribe';
-    final bool enabled = !_busy && (_picked != null);
+    final canContinue =
+        context.select<ContentProvider, bool>((p) => p.hasTranscript);
 
     return Scaffold(
       appBar: AppBar(title: Text(widget.appBarTitle)),
@@ -68,52 +102,20 @@ class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
             if (_error != null)
               Text(_error!, style: const TextStyle(color: Colors.red)),
             const Spacer(),
-            WideButton(
-              label: cta,
-              onPressed: !enabled
-                  ? null
-                  : () async {
-                      if (!hasTranscript) {
-                        // TRANSCRIBE
-                        setState(() {
-                          _busy = true;
-                          _error = null;
-                        });
-                        try {
-                          final out = await _svc.sendFile(_picked!);
-                          _provider.setTranscript(out);
-                        } catch (e) {
-                          setState(
-                              () => _error = 'Transcription failed: $e');
-                        } finally {
-                          if (mounted) {
-                            setState(() => _busy = false);
-                          }
-                        }
-                      } else {
-                        // CONTINUE → ANALYZE
-                        await _provider.runAnalysis(
-                            mode: widget.typeGroup.toStudyMode());
-                        if (mounted && _provider.error == null) {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                                builder: (_) => const AnalysisScreen()),
-                          );
-                        }
-                      }
-                    },
+            PrimaryButton(
+              label: canContinue
+                  ? (_analyzing ? 'Analyzing…' : 'Continue')
+                  : (_busy ? 'Transcribing…' : 'Transcribe'),
+              onPressed: (canContinue && !_analyzing)
+                  ? _continue
+                  : (!canContinue && !_busy)
+                      ? _run
+                      : null,
             ),
           ],
         ),
       ),
     );
-  }
-}
-
-extension on XTypeGroup {
-  StudyMode toStudyMode() {
-    // map your screen’s type group to the right enum value
-    return StudyMode.memorization;
   }
 }
 

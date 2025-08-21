@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../content_provider.dart';
 
 class AnalysisScreen extends StatelessWidget {
@@ -7,61 +8,32 @@ class AnalysisScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ContentProvider>(
-      builder: (context, p, _) {
-        return Scaffold(
-          appBar: AppBar(title: const Text('Study Pack')),
-          body: Padding(
-            padding: const EdgeInsets.all(16),
-            child: () {
-              if (p.analyzing) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (p.error != null) {
-                return Text(p.error!, style: const TextStyle(color: Colors.red));
-              }
-              final pack = p.studyPack;
-              if (pack == null) {
-                return const Text('No analysis yet. Transcribe and continue to generate the pack.');
-              }
+    final analysis = context.watch<ContentProvider>().analysis ?? const <String, dynamic>{};
+    final summary = (analysis['summary'] as String?) ?? '';
+    final topics = (analysis['topics'] as List?)?.map((e) => e.toString()).toList() ?? const <String>[];
 
-              // Safely read common sections:
-              final summary = (pack['summary'] ?? '').toString();
-              final items   = (pack['items'] is List) ? (pack['items'] as List) : const [];
-              final flash    = (pack['flashcards'] is List) ? (pack['flashcards'] as List) : const [];
-              final quiz     = (pack['quiz'] is List) ? (pack['quiz'] as List) : const [];
-
-              return ListView(
-                children: [
-                  if (summary.isNotEmpty) ...[
-                    const Text('Summary', style: TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 8),
-                    Text(summary),
-                    const SizedBox(height: 16),
-                  ],
-                  if (items.isNotEmpty) ...[
-                    const Text('Items', style: TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 8),
-                    ...items.map((e) => Text(e.toString())),
-                    const SizedBox(height: 16),
-                  ],
-                  if (flash.isNotEmpty) ...[
-                    const Text('Flashcards', style: TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 8),
-                    ...flash.map((e) => Text(e.toString())),
-                    const SizedBox(height: 16),
-                  ],
-                  if (quiz.isNotEmpty) ...[
-                    const Text('Quiz', style: TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 8),
-                    ...quiz.map((e) => Text(e.toString())),
-                  ],
-                ],
-              );
-            }(),
-          ),
-        );
-      },
+    return Scaffold(
+      appBar: AppBar(title: const Text('Study Pack')),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: ListView(
+          children: [
+            if (summary.isNotEmpty) ...[
+              const Text('Summary', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Text(summary),
+              const SizedBox(height: 24),
+            ],
+            if (topics.isNotEmpty) ...[
+              const Text('Topics', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              ...topics.map((t) => Text('• $t')),
+            ],
+            if (summary.isEmpty && topics.isEmpty)
+              const Text('No analysis yet. Please run analysis from the previous screen.'),
+          ],
+        ),
+      ),
     );
   }
 }
