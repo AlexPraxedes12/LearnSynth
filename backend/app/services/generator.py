@@ -1,4 +1,5 @@
-import os, logging, tempfile, subprocess, shlex
+import os, io, shutil, tempfile, logging, subprocess, shlex
+from pathlib import Path
 from fastapi import UploadFile, File, HTTPException
 from io import BytesIO
 import fitz  # PyMuPDF
@@ -39,6 +40,30 @@ logger.info("Transcription model=%s base_url=%s", OPENAI_TRANSCRIBE_MODEL, OPENA
 logger.info("MAX_MEDIA_BYTES=%s", MAX_MEDIA_BYTES)
 
 
+def _save_upload_to_named_temp(upload_file) -> str:
+    """
+    Save FastAPI UploadFile to a named temp file, preserving the original suffix.
+    This allows the OpenAI SDK to infer the format (mp3, wav, etc).
+    """
+    suffix = Path(upload_file.filename or "").suffix or ".mp3"
+    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+        upload_file.file.seek(0)
+        shutil.copyfileobj(upload_file.file, tmp)
+        tmp.flush()
+        return tmp.name
+
+
+def _convert_to_wav16k(src_path: str) -> str:
+    """
+    Optional fallback: convert any audio to 16 kHz mono WAV using ffmpeg,
+    then return the new path.
+    """
+    dst = tempfile.NamedTemporaryFile(suffix=".wav", delete=False).name
+    cmd = f'ffmpeg -y -i {shlex.quote(src_path)} -vn -ac 1 -ar 16000 -f wav {shlex.quote(dst)}'
+    subprocess.run(shlex.split(cmd), check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return dst
+
+
 def _ensure_size_ok(upload_file):
     # Works with FastAPI UploadFile
     upload_file.file.seek(0, os.SEEK_END)
@@ -63,19 +88,44 @@ def _extract_audio_to_tmp(video_upload_file, ext=".mp3"):
 
 
 def transcribe_audio(file):
-    _ensure_size_ok(file)
+    # If you have a size guard, keep it:
     try:
-        file.file.seek(0)
-        resp = client.audio.transcriptions.create(
-            model=OPENAI_TRANSCRIBE_MODEL,
-            file=file.file,
-        )
+        _ensure_size_ok(file)
+    except NameError:
+        pass  # ignore if not present
+
+    try:
+        # 1) Save the upload with a proper extension
+        src_path = _save_upload_to_named_temp(file)
+
+        # 2) First attempt: send as-is so OpenAI can detect format by suffix
+        try:
+            with open(src_path, "rb") as fh:
+                resp = client.audio.transcriptions.create(
+                    model=OPENAI_TRANSCRIBE_MODEL,  # e.g. "whisper-1"
+                    file=fh,
+                )
+        except Exception as e:
+            # 3) If the format is not recognized, convert to WAV 16k and retry once
+            if "Unrecognized file format" in str(e):
+                wav_path = _convert_to_wav16k(src_path)
+                with open(wav_path, "rb") as fh:
+                    resp = client.audio.transcriptions.create(
+                        model=OPENAI_TRANSCRIBE_MODEL,
+                        file=fh,
+                    )
+            else:
+                raise
+
         text = getattr(resp, "text", None) or (resp.get("text") if isinstance(resp, dict) else None)
         if not text:
             raise RuntimeError("Empty transcription")
         return text.strip()
+
     except Exception as exc:
         msg = str(exc)
+        if "Unrecognized file format" in msg:
+            raise HTTPException(status_code=400, detail="Unsupported or unrecognized audio format")
         if "Connection refused" in msg or "APIConnectionError" in msg:
             raise HTTPException(status_code=502, detail=f"Transcription backend not reachable at {OPENAI_BASE_URL}")
         if "401" in msg or "Unauthorized" in msg:
