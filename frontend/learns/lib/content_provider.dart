@@ -1,6 +1,14 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'services/transcription_service.dart';
+
+enum StudyMode {
+  memorization,
+  deep_understanding,
+  contextual_association,
+  interactive_evaluation
+}
 
 /// Simple model representing a piece of study content. Either [content]
 /// or [filePath] will be provided depending on how the content was
@@ -13,6 +21,8 @@ class ContentItem {
 
 /// Stores the content added by the user so it can be accessed across screens.
 class ContentProvider extends ChangeNotifier {
+  final _svc = TranscriptionService();
+
   /// Cleaned or processed content used throughout the study flow.
   String? content;
 
@@ -31,6 +41,13 @@ class ContentProvider extends ChangeNotifier {
   /// Cached statistics about the user's study progress.
   Map<String, dynamic> progress = {};
   final List<ContentItem> _saved = [];
+
+  /// Transcription and analysis state
+  String? transcript;
+  StudyMode mode = StudyMode.memorization;
+  Map<String, dynamic>? analysis;
+  bool loading = false;
+  String? error;
 
   /// List of all content pieces added by the user.
   List<ContentItem> get savedContent => List.unmodifiable(_saved);
@@ -118,6 +135,53 @@ class ContentProvider extends ChangeNotifier {
   void setActivitySummaries(Map<String, String> summaries) {
     activitySummaries = summaries;
     notifyListeners();
+  }
+
+  // --- New methods for transcript analysis ---
+  void setTranscript(String t) {
+    transcript = t;
+    notifyListeners();
+  }
+
+  void setMode(StudyMode m) {
+    mode = m;
+    notifyListeners();
+  }
+
+  Future<void> runAnalysis() async {
+    final t = transcript?.trim();
+    if (t == null || t.isEmpty) {
+      error = 'No transcript available';
+      notifyListeners();
+      return;
+    }
+    loading = true;
+    error = null;
+    notifyListeners();
+
+    try {
+      final res = await _svc.analyzeText(t, mode: mode.name);
+      analysis = res;
+      summary = res['summary'] as String?;
+      flashcards = ((res['flashcards'] as List?) ?? [])
+          .map<Map<String, String>>(
+              (e) => Map<String, String>.from(e as Map))
+          .toList();
+      evaluationQuestions = ((res['quiz'] as List?) ?? [])
+          .map<Map<String, dynamic>>(
+              (e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+      conceptMap = res['concept_map'] as Map<String, dynamic>?;
+      contextualExercises = ((res['contextual_association'] as List?) ?? [])
+          .map<Map<String, dynamic>>(
+              (e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+    } catch (e) {
+      error = e.toString();
+    } finally {
+      loading = false;
+      notifyListeners();
+    }
   }
 
   /// Update the locally cached [progress] data.

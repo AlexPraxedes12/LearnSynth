@@ -14,6 +14,7 @@ class AudioPickerScreen extends StatelessWidget {
         label: 'Audio',
         extensions: ['mp3', 'm4a', 'wav', 'flac', 'ogg', 'aac'],
       ),
+      enableStudyPack: true,
     );
   }
 }
