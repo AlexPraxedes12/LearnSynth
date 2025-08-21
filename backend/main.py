@@ -31,7 +31,7 @@ class StudyRequest(BaseModel):
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-MAX_UPLOAD_SIZE = 5 * 1024 * 1024  # 5 MB
+MAX_UPLOAD_SIZE = 100 * 1024 * 1024  # 100 MB
 
 app = FastAPI()
 
@@ -44,15 +44,19 @@ async def upload_content(file: UploadFile = File(...)):
         size = file.file.tell()
         file.file.seek(0)
         if size > MAX_UPLOAD_SIZE:
-            raise HTTPException(status_code=400, detail="File too large (max 5MB)")
+            raise HTTPException(status_code=400, detail="File too large (max 100MB)")
         content_type = (file.content_type or "").lower()
-        if content_type.startswith("audio/"):
+        ext = os.path.splitext(file.filename or "")[1].lower()
+
+        if content_type.startswith("audio/") or ext in [".mp3", ".m4a", ".wav", ".flac", ".ogg", ".aac"]:
             text = generator.transcribe_audio(file)
             return {"text": text}
-        if content_type.startswith("video/"):
+
+        if content_type.startswith("video/") or ext in [".mp4", ".mkv", ".mov", ".avi", ".webm"]:
             text = generator.transcribe_video(file)
             return {"text": text}
 
+        # else: document
         return generator.generate_course(file)
     except HTTPException as exc:
         raise exc
