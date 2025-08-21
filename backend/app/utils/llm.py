@@ -17,9 +17,9 @@ load_dotenv(env_path)
 anthropic_client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-PROVIDER = os.getenv("MODEL_PROVIDER", "claude").lower()
-CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-3-haiku-20240307")
-OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
+DEFAULT_ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-3-haiku-20240307")
+DEFAULT_OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
+DEFAULT_OSS_MODEL = os.getenv("OPENAI_OSS_MODEL", "gpt-oss")
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,13 @@ def _encoding():
     """Return tiktoken encoding for the active model if available."""
     if not tiktoken:
         return None
-    model = CLAUDE_MODEL if PROVIDER != "openai" else OPENAI_MODEL
+    provider = (os.getenv("LLM_PROVIDER") or "anthropic").lower()
+    if provider == "openai":
+        model = os.getenv("OPENAI_MODEL", DEFAULT_OPENAI_MODEL)
+    elif provider == "oss":
+        model = os.getenv("OPENAI_OSS_MODEL", DEFAULT_OSS_MODEL)
+    else:
+        model = os.getenv("ANTHROPIC_MODEL", DEFAULT_ANTHROPIC_MODEL)
     try:
         return tiktoken.encoding_for_model(model)
     except Exception:
@@ -92,25 +98,81 @@ def split_text_into_chunks(text: str, max_tokens: int = 10_000):
         chunks.append(" ".join(current))
     return chunks
 
-def ask_llm(prompt: str) -> str:
-    """Send a prompt to the configured LLM provider."""
+def ask_llm(prompt: str, system: str | None = None, model_override: str | None = None) -> str:
+    """Send a prompt to the configured LLM provider and return plain text."""
+    provider = (os.getenv("LLM_PROVIDER") or "anthropic").lower()
     try:
-        if PROVIDER == "openai":
-            logger.info("Using provider=%s model=%s", PROVIDER, OPENAI_MODEL)
-            resp = openai.ChatCompletion.create(
-                model=OPENAI_MODEL,
-                messages=[{"role": "user", "content": prompt}],
-            )
+        if provider == "openai":
+            api_key = os.getenv("OPENAI_API_KEY")
+            model = model_override or os.getenv("OPENAI_MODEL", DEFAULT_OPENAI_MODEL)
+            logger.info("Using provider=%s model=%s", provider, model)
+            if hasattr(openai, "OpenAI"):
+                client = openai.OpenAI(api_key=api_key)
+                messages = []
+                if system:
+                    messages.append({"role": "system", "content": system})
+                messages.append({"role": "user", "content": prompt})
+                resp = client.chat.completions.create(model=model, messages=messages)
+                return resp.choices[0].message.content.strip()
+            # Fallback for very old clients
+            openai.api_key = api_key
+            messages = []
+            if system:
+                messages.append({"role": "system", "content": system})
+            messages.append({"role": "user", "content": prompt})
+            resp = openai.ChatCompletion.create(model=model, messages=messages)
             return resp["choices"][0]["message"]["content"].strip()
 
-        logger.info("Using provider=%s model=%s", PROVIDER, CLAUDE_MODEL)
+        if provider == "oss":
+            api_key = os.getenv("OPENAI_API_KEY", "not-needed")
+            base_url = os.getenv("OPENAI_BASE_URL", "http://localhost:11434/v1")
+            model = model_override or os.getenv("OPENAI_OSS_MODEL", DEFAULT_OSS_MODEL)
+            logger.info("Using provider=%s model=%s", provider, model)
+            if hasattr(openai, "OpenAI"):
+                client = openai.OpenAI(api_key=api_key, base_url=base_url)
+                messages = []
+                if system:
+                    messages.append({"role": "system", "content": system})
+                messages.append({"role": "user", "content": prompt})
+                resp = client.chat.completions.create(model=model, messages=messages)
+                return resp.choices[0].message.content.strip()
+            import requests
+
+            messages = []
+            if system:
+                messages.append({"role": "system", "content": system})
+            messages.append({"role": "user", "content": prompt})
+            headers = {"Authorization": f"Bearer {api_key}"}
+            resp = requests.post(
+                f"{base_url}/chat/completions",
+                headers=headers,
+                json={"model": model, "messages": messages},
+                timeout=60,
+            )
+            if resp.status_code != 200:
+                raise RuntimeError(
+                    f"oss request failed ({resp.status_code}): {resp.text}"
+                )
+            data = resp.json()
+            return data["choices"][0]["message"]["content"].strip()
+
+        # Fallback to anthropic
+        provider = "anthropic"
+        model = model_override or os.getenv("ANTHROPIC_MODEL", DEFAULT_ANTHROPIC_MODEL)
+        logger.info("Using provider=%s model=%s", provider, model)
         resp = anthropic_client.messages.create(
-            model=CLAUDE_MODEL,
+            model=model,
             max_tokens=1024,
-            system="You are a helpful assistant.",
+            system=system or "You are a helpful assistant.",
             messages=[{"role": "user", "content": prompt}],
         )
         return resp.content[0].text.strip()
     except Exception as exc:
-        logger.exception("LLM request failed with %s: %s", PROVIDER, exc)
-        raise HTTPException(status_code=500, detail="LLM request failed")
+        logger.exception("LLM request failed: %s", exc)
+        status = getattr(getattr(exc, "response", None), "status_code", None)
+        body = getattr(getattr(exc, "response", None), "text", None)
+        detail = f"{provider} request failed"
+        if status:
+            detail += f" (status {status})"
+        detail += f": {body or exc}"
+        raise HTTPException(status_code=500, detail=detail)
