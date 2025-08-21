@@ -2,17 +2,23 @@ import 'dart:io';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
+import 'package:provider/provider.dart';
+
 import '../services/transcription_service.dart';
+import '../content_provider.dart';
+import 'analysis_screen.dart';
 
 class FileTranscribeScreen extends StatefulWidget {
   final String appBarTitle;
   final String buttonLabel;
   final XTypeGroup fileTypeGroup;
+  final bool enableStudyPack;
   const FileTranscribeScreen({
     super.key,
     required this.appBarTitle,
     required this.buttonLabel,
     required this.fileTypeGroup,
+    this.enableStudyPack = false,
   });
 
   @override
@@ -45,6 +51,24 @@ class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
     });
   }
 
+  Future<void> _analyze() async {
+    final txt = _result;
+    if (txt == null) return;
+    final p = context.read<ContentProvider>();
+    p.setTranscript(txt);
+    await p.runAnalysis();
+    if (!mounted) return;
+    if (p.error != null) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Analyze error: ${p.error}')));
+      return;
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const AnalysisScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isErr = (_result ?? '').startsWith('Error:');
@@ -64,10 +88,16 @@ class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
             const SizedBox(height: 8),
             Expanded(
               child: SingleChildScrollView(
-                child: Text(_result!, style: TextStyle(color: isErr ? Colors.red : null)),
+                child: Text(_result!,
+                    style: TextStyle(color: isErr ? Colors.red : null)),
               ),
             ),
             const SizedBox(height: 16),
+            if (widget.enableStudyPack && !isErr)
+              FilledButton(
+                onPressed: _analyze,
+                child: const Text('Generate Study Pack'),
+              ),
           ] else
             const Spacer(),
           if (_busy) const LinearProgressIndicator(),
