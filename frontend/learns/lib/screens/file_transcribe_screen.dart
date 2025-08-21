@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
 
-import '../services/transcription_service.dart';
 import '../content_provider.dart';
+import '../services/transcription_service.dart';
 import 'analysis_screen.dart';
 
 class FileTranscribeScreen extends StatefulWidget {
@@ -28,12 +28,17 @@ class FileTranscribeScreen extends StatefulWidget {
 class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
   File? _picked;
   String? _result;
+  String? _error;
   bool _busy = false;
+  bool _analyzing = false;
+
   final _svc = TranscriptionService();
 
   Future<void> _pick() async {
+    if (_busy || _analyzing) return;
     final x = await openFile(acceptedTypeGroups: [widget.fileTypeGroup]);
     if (x == null) return;
+    if (!mounted) return;
     setState(() {
       _picked = File(x.path);
       _result = null;
@@ -41,74 +46,117 @@ class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
   }
 
   Future<void> _run() async {
+    if (_busy) return;
     final f = _picked;
     if (f == null) return;
-    setState(() => _busy = true);
-    final out = await _svc.sendFile(f);
-    setState(() {
-      _result = out;
-      _busy = false;
-    });
-  }
 
-  Future<void> _analyze() async {
-    final txt = _result;
-    if (txt == null) return;
-    final p = context.read<ContentProvider>();
-    p.setTranscript(txt);
-    await p.runAnalysis();
-    if (!mounted) return;
-    if (p.error != null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Analyze error: ${p.error}')));
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+
+    String out;
+    try {
+      out = await _svc.sendFile(f);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _error = e.toString();
+      });
       return;
     }
-    Navigator.push(
-      context,
+
+    if (!mounted) return;
+    setState(() {
+      _busy = false;
+      _result = out;
+    });
+
+    // Persist transcript in Provider for later analysis
+    context.read<ContentProvider>().setTranscript(out);
+  }
+
+  Future<void> _continueToAnalysis() async {
+    if (_analyzing) return;
+    setState(() => _analyzing = true);
+
+    try {
+      await context.read<ContentProvider>().runAnalysis();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _analyzing = false;
+        _error = e.toString();
+      });
+      return;
+    }
+
+    if (!mounted) return;
+    setState(() => _analyzing = false);
+
+    // Navigate only if still mounted
+    Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const AnalysisScreen()),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final isErr = (_result ?? '').startsWith('Error:');
+    final canTranscribe = !_busy && _picked != null && _result == null;
+
     return Scaffold(
       appBar: AppBar(title: Text(widget.appBarTitle)),
       body: Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          if (_picked != null) ...[
-            Text(p.basename(_picked!.path), style: const TextStyle(fontWeight: FontWeight.w600)),
-            const SizedBox(height: 4),
-            Text(_picked!.path, style: const TextStyle(fontSize: 12, color: Colors.white70)),
-            const SizedBox(height: 16),
-          ],
-          if (_result != null) ...[
-            const Text('Result:', style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Expanded(
-              child: SingleChildScrollView(
-                child: Text(_result!,
-                    style: TextStyle(color: isErr ? Colors.red : null)),
-              ),
-            ),
-            const SizedBox(height: 16),
-            if (widget.enableStudyPack && !isErr)
-              FilledButton(
-                onPressed: _analyze,
-                child: const Text('Generate Study Pack'),
-              ),
-          ] else
+        child: Column(
+          children: [
+            if (_picked != null) ...[
+              Text(p.basename(_picked!.path),
+                  style: const TextStyle(fontWeight: FontWeight.w600)),
+              const SizedBox(height: 4),
+              Text(_picked!.path,
+                  style: const TextStyle(fontSize: 12, color: Colors.white70)),
+              const SizedBox(height: 16),
+            ],
+
+            if (_error != null)
+              Text(_error!, style: const TextStyle(color: Colors.red)),
+
             const Spacer(),
-          if (_busy) const LinearProgressIndicator(),
-          const SizedBox(height: 12),
-          FilledButton(onPressed: _pick, child: Text(widget.buttonLabel)),
-          const SizedBox(height: 8),
-          FilledButton.tonal(
-            onPressed: (_picked != null && !_busy) ? _run : null,
-            child: const Text('Transcribe'),
-          ),
-        ]),
+
+            // Choose File (always enabled unless busy/analyzing)
+            ElevatedButton(
+              onPressed: _busy || _analyzing ? null : _pick,
+              child: Text(widget.buttonLabel),
+            ),
+            const SizedBox(height: 12),
+
+            // If there is NO transcript yet -> show Transcribe
+            if (_result == null)
+              ElevatedButton(
+                onPressed: canTranscribe ? _run : null,
+                child: _busy
+                    ? const SizedBox(
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Text('Transcribe'),
+              ),
+
+            // If there IS a transcript -> show Continue instead
+            if (_result != null)
+              ElevatedButton(
+                onPressed: _analyzing ? null : _continueToAnalysis,
+                child: _analyzing
+                    ? const SizedBox(
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Text('Continue'),
+              ),
+          ],
+        ),
       ),
     );
   }
