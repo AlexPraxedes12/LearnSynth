@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../widgets/quiz_question_card.dart';
-import '../widgets/primary_button.dart';
+import '../widgets/wide_button.dart';
 import '../constants.dart';
 import '../content_provider.dart';
 import '../widgets/key_value_card.dart';
@@ -44,7 +44,7 @@ class InteractiveEvaluationScreen extends StatelessWidget {
             else
               const Center(child: Text('No questions generated.')),
             const SizedBox(height: 16),
-            PrimaryButton(
+            WideButton(
               label: 'Submit',
               onPressed: () {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -53,7 +53,7 @@ class InteractiveEvaluationScreen extends StatelessWidget {
               },
             ),
             const SizedBox(height: 16),
-            PrimaryButton(
+            WideButton(
               label: 'Complete Session',
               onPressed: () =>
                   Navigator.pushNamed(context, Routes.progress),

@@ -18,6 +18,14 @@ class AppTheme {
       colorScheme: const ColorScheme.dark(
         primary: accentTeal,
       ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          minimumSize: const Size.fromHeight(52),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+      ),
       appBarTheme: const AppBarTheme(
         backgroundColor: background,
         elevation: 0,

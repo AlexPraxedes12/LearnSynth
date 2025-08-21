@@ -1,7 +1,8 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'services/transcription_service.dart';
+import 'package:http/http.dart' as http;
 
 enum StudyMode {
   memorization,
@@ -21,8 +22,6 @@ class ContentItem {
 
 /// Stores the content added by the user so it can be accessed across screens.
 class ContentProvider extends ChangeNotifier {
-  final _svc = TranscriptionService();
-
   /// Cleaned or processed content used throughout the study flow.
   String? content;
 
@@ -45,7 +44,8 @@ class ContentProvider extends ChangeNotifier {
   /// Transcription and analysis state
   String? transcript;
   StudyMode mode = StudyMode.memorization;
-  Map<String, dynamic>? analysis;
+  Map<String, dynamic>? _studyPack;
+  Map<String, dynamic>? get studyPack => _studyPack;
   bool loading = false;
   String? error;
 
@@ -140,6 +140,7 @@ class ContentProvider extends ChangeNotifier {
   // --- New methods for transcript analysis ---
   void setTranscript(String t) {
     transcript = t;
+    content = t;
     notifyListeners();
   }
 
@@ -160,24 +161,57 @@ class ContentProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final res = await _svc.analyzeText(t, mode: mode.name);
-      analysis = res;
-      summary = res['summary'] as String?;
-      flashcards = ((res['flashcards'] as List?) ?? [])
-          .map<Map<String, String>>(
-              (e) => Map<String, String>.from(e as Map))
-          .toList();
-      evaluationQuestions = ((res['quiz'] as List?) ?? [])
-          .map<Map<String, dynamic>>(
-              (e) => Map<String, dynamic>.from(e as Map))
-          .toList();
-      conceptMap = res['concept_map'] as Map<String, dynamic>?;
-      contextualExercises = ((res['contextual_association'] as List?) ?? [])
-          .map<Map<String, dynamic>>(
-              (e) => Map<String, dynamic>.from(e as Map))
-          .toList();
+      final uri = Uri.parse('http://10.0.2.2:8000/analyze');
+      final resp = await http.post(uri,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'text': t, 'mode': mode.name}));
+      if (resp.statusCode != 200) {
+        throw FormatException(
+            'Analyze failed (${resp.statusCode}): ${resp.body}');
+      }
+
+      dynamic decoded;
+      try {
+        decoded = jsonDecode(resp.body);
+      } catch (e) {
+        throw FormatException('Invalid JSON: ${e.toString()}');
+      }
+
+      if (decoded is List) {
+        if (decoded.isEmpty) {
+          throw const FormatException('Empty array response');
+        }
+        decoded = decoded.first;
+      }
+
+      if (decoded is Map<String, dynamic>) {
+        if (decoded['data'] is Map) {
+          decoded = Map<String, dynamic>.from(decoded['data'] as Map);
+        } else {
+          decoded = Map<String, dynamic>.from(decoded);
+        }
+      } else {
+        throw FormatException('Unexpected response type: ${decoded.runtimeType}');
+      }
+
+      _studyPack = decoded;
+      summary = decoded['summary'] as String?;
+      flashcards = (decoded['flashcards'] as List?)
+              ?.cast<Map<String, dynamic>>()
+              .map<Map<String, String>>((e) =>
+                  e.map((key, value) => MapEntry(key, value.toString())))
+              .toList() ??
+          [];
+      evaluationQuestions =
+          (decoded['quiz'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+      conceptMap = decoded['concept_map'] as Map<String, dynamic>?;
+      contextualExercises =
+          (decoded['contextual_association'] as List?)
+                  ?.cast<Map<String, dynamic>>() ??
+              [];
     } catch (e) {
       error = e.toString();
+      rethrow;
     } finally {
       loading = false;
       notifyListeners();
