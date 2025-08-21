@@ -27,4 +27,20 @@ class TranscriptionService {
       return 'Error: $e';
     }
   }
+
+  // Calls the backend to analyze a block of [text] and returns the parsed JSON
+  // response. Throws an [Exception] if the request fails.
+  Future<Map<String, dynamic>> analyzeText(String text,
+      {String mode = 'memorization'}) async {
+    final uri = Uri.parse('http://10.0.2.2:8000/analyze');
+    final resp = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'text': text, 'mode': mode}),
+    );
+    if (resp.statusCode != 200) {
+      throw Exception('Analyze failed (${resp.statusCode}): ${resp.body}');
+    }
+    return jsonDecode(resp.body) as Map<String, dynamic>;
+  }
 }
