@@ -21,17 +21,16 @@ class _LoadingScreenState extends State<LoadingScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final p = context.read<ContentProvider>();
-      final ok = await p.runAnalysis();
+      final ok = await context.read<ContentProvider>().runAnalysis();
       if (!mounted) return;
       if (ok) {
-        Navigator.of(context).pushReplacementNamed(Routes.analysis);
+        Navigator.of(context).pushReplacementNamed(Routes.studyPack);
       } else {
-        final msg = p.lastError ?? 'Analysis failed. Please try again.';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(msg)),
-        );
-        // Optionally pop or reset UI here
+        final msg =
+            context.read<ContentProvider>().lastError ?? 'Analyze failed.';
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(msg)));
+        Navigator.of(context).pop(); // go back so user can retry
       }
     });
   }
