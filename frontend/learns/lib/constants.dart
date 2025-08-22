@@ -5,7 +5,7 @@ class Routes {
   static const String home = '/';
   static const String textInput = '/text-input';
   static const String loading = '/loading';
-  static const String analysis = '/analysis';
+  static const String analysis = '/studyPack';
   static const String methodSelection = '/method-selection';
   static const String deepUnderstanding = '/deep-understanding';
   static const String memorization = '/memorization';

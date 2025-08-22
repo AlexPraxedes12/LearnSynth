@@ -6,7 +6,7 @@ class ContextualAssociationScreen extends StatelessWidget {
   const ContextualAssociationScreen({super.key});
   @override
   Widget build(BuildContext context) {
-    final terms = context.watch<ContentProvider>().conceptMap;
+    final terms = context.watch<ContentProvider>().conceptTopics;
     return Scaffold(
       appBar: AppBar(title: const Text('Concept Map')),
       body: terms.isEmpty

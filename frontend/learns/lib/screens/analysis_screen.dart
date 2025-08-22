@@ -2,10 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../content_provider.dart';
 import '../widgets/wide_button.dart';
-import 'memorization_screen.dart';
-import 'deep_understanding_screen.dart';
-import 'contextual_association_screen.dart';
-import 'interactive_evaluation_screen.dart';
 
 class AnalysisScreen extends StatelessWidget {
   const AnalysisScreen({super.key});
@@ -19,54 +15,34 @@ class AnalysisScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: ListView(
           children: [
-            if (p.hasSummary) ...[
+            if (p.summary?.isNotEmpty ?? false) ...[
               const Text('Summary', style: TextStyle(fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
-              Text(p.summary),
+              Text(p.summary!),
               const SizedBox(height: 24),
             ],
             WideButton(
               label: 'Memorization (Flashcards)',
-              onPressed: p.hasFlashcards
-                  ? () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const MemorizationScreen()),
-                      )
-                  : null,
+              enabled: p.flashcards.isNotEmpty,
+              onPressed: p.flashcards.isEmpty ? null : () => Navigator.pushNamed(context, '/memorization'),
             ),
             const SizedBox(height: 12),
             WideButton(
               label: 'Deep Understanding',
-              onPressed: p.hasDeepPrompts
-                  ? () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const DeepUnderstandingScreen()),
-                      )
-                  : null,
+              enabled: p.deepPrompts.isNotEmpty,
+              onPressed: p.deepPrompts.isEmpty ? null : () => Navigator.pushNamed(context, '/deep'),
             ),
             const SizedBox(height: 12),
             WideButton(
               label: 'Contextual Association',
-              onPressed: p.hasConceptMap
-                  ? () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const ContextualAssociationScreen()),
-                      )
-                  : null,
+              enabled: p.conceptTopics.isNotEmpty,
+              onPressed: p.conceptTopics.isNotEmpty ? () => Navigator.pushNamed(context, '/concept') : null,
             ),
             const SizedBox(height: 12),
             WideButton(
               label: 'Interactive Evaluation (Quiz)',
-              onPressed: p.hasQuiz
-                  ? () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const InteractiveEvaluationScreen()),
-                      )
-                  : null,
+              enabled: p.quizzes.isNotEmpty,
+              onPressed: p.quizzes.isNotEmpty ? () => Navigator.pushNamed(context, '/quiz') : null,
             ),
           ],
         ),
@@ -74,4 +50,3 @@ class AnalysisScreen extends StatelessWidget {
     );
   }
 }
-
