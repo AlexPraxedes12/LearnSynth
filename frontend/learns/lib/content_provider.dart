@@ -169,45 +169,46 @@ class ContentProvider extends ChangeNotifier {
   }
 
   Future<bool> runAnalysis() async {
-    if (_isAnalyzing) return false;        // single-flight guard
-    if ((_rawText ?? '').trim().isEmpty && (_content ?? '').trim().isEmpty) {
+    if (_isAnalyzing) return false;
+
+    final String input = (_rawText?.trim().isNotEmpty == true)
+        ? _rawText!.trim()
+        : (_content?.trim() ?? '');
+
+    if (input.isEmpty) {
       _lastError = 'Nothing to analyze.';
       notifyListeners();
       return false;
     }
+
     _isAnalyzing = true;
     _lastError = null;
+    _canContinue = false;
     notifyListeners();
 
     try {
-      final url = Uri.parse('http://10.0.2.2:8000/analyze');
+      final uri = Uri.parse('http://10.0.2.2:8000/analyze');
       final resp = await http.post(
-        url,
+        uri,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'text': _rawText ?? _content,   // prefer raw transcript; fall back to content
-        }),
+        body: jsonEncode({'text': input}),
       );
 
-      if (resp.statusCode != 200) {
-        // forward readable error message; 503/529 etc are handled server-side but propagate here
-        _lastError = 'Analyze failed: ${resp.statusCode}';
-        _canContinue = false;
+      if (resp.statusCode == 200) {
+        final Map<String, dynamic> data =
+            jsonDecode(resp.body) as Map<String, dynamic>;
+        await setAnalysis(data);
+        _canContinue = true;
+        _lastError = null;
         notifyListeners();
-        return false;
+        return true;
       }
 
-      // Parse and normalize the payload (keep tolerant parsing you already added)
-      final Map<String, dynamic> data = jsonDecode(resp.body) as Map<String, dynamic>;
-      await setAnalysis(data);            // ensure setAnalysis is async and awaited
-      _canContinue = true;
-      _lastError = null;
+      _lastError = 'Analyze failed: ${resp.statusCode}';
       notifyListeners();
-      return true;
-    } catch (e, st) {
-      debugPrint('runAnalysis error: $e\n$st');
-      _lastError = e.toString();
-      _canContinue = false;
+      return false;
+    } catch (e) {
+      _lastError = 'Analyze failed: $e';
       notifyListeners();
       return false;
     } finally {

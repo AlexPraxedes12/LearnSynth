@@ -2,8 +2,11 @@ import 'dart:io';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../widgets/wide_button.dart';
+import '../content_provider.dart';
+import '../constants.dart';
 import 'file_transcribe_screen.dart';
 
 class AudioPickerScreen extends StatelessWidget {
@@ -30,6 +33,7 @@ class AudioPickerScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final provider = context.watch<ContentProvider>();
     return Scaffold(
       appBar: AppBar(title: const Text('Upload Audio')),
       body: Padding(
@@ -41,6 +45,32 @@ class AudioPickerScreen extends StatelessWidget {
               label: 'Select Audio',
               onPressed: () => _pick(context),
             ),
+            const SizedBox(height: 16),
+            WideButton(
+              label: provider.isAnalyzing ? 'Analyzing…' : 'Continue',
+              onPressed: provider.isAnalyzing
+                  ? null
+                  : () async {
+                      final ok =
+                          await context.read<ContentProvider>().runAnalysis();
+                      if (!context.mounted) return;
+                      if (ok) {
+                        Navigator.of(context).pushNamed(Routes.studyPack);
+                      } else {
+                        final msg =
+                            context.read<ContentProvider>().lastError ??
+                                'Analysis failed';
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(msg)),
+                        );
+                      }
+                    },
+            ),
+            if (provider.isAnalyzing) ...[
+              const SizedBox(height: 16),
+              const Text('Analyzing…',
+                  style: TextStyle(fontSize: 12, color: Colors.white70)),
+            ],
           ],
         ),
       ),
