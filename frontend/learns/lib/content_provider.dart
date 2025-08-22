@@ -41,7 +41,6 @@ class ContentProvider extends ChangeNotifier {
   bool _isAnalyzing = false;
   bool _canContinue = false;
   String? _lastError;
-  Future<bool>? _inflightAnalysis;
 
   // --- Content ---
   String? _summary;
@@ -93,6 +92,8 @@ class ContentProvider extends ChangeNotifier {
 
   void setTranscript(String text) {
     _rawText = text;
+    _canContinue = false;
+    _lastError = null;
     notifyListeners();
   }
 
@@ -167,29 +168,45 @@ class ContentProvider extends ChangeNotifier {
     return [];
   }
 
-  Future<bool> runAnalysis() {
-    if (_inflightAnalysis != null) return _inflightAnalysis!;
-    _inflightAnalysis = _runAnalysisInternal()
-      ..whenComplete(() => _inflightAnalysis = null);
-    return _inflightAnalysis!;
-  }
-
-  Future<bool> _runAnalysisInternal() async {
-    if (_isAnalyzing) return _canContinue;
+  Future<bool> runAnalysis() async {
+    if (_isAnalyzing) return false;        // single-flight guard
+    if ((_rawText ?? '').trim().isEmpty && (_content ?? '').trim().isEmpty) {
+      _lastError = 'Nothing to analyze.';
+      notifyListeners();
+      return false;
+    }
     _isAnalyzing = true;
     _lastError = null;
     notifyListeners();
+
     try {
-      await _doRunAnalysis();
+      final url = Uri.parse('http://10.0.2.2:8000/analyze');
+      final resp = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'text': _rawText ?? _content,   // prefer raw transcript; fall back to content
+        }),
+      );
+
+      if (resp.statusCode != 200) {
+        // forward readable error message; 503/529 etc are handled server-side but propagate here
+        _lastError = 'Analyze failed: ${resp.statusCode}';
+        _canContinue = false;
+        notifyListeners();
+        return false;
+      }
+
+      // Parse and normalize the payload (keep tolerant parsing you already added)
+      final Map<String, dynamic> data = jsonDecode(resp.body) as Map<String, dynamic>;
+      await setAnalysis(data);            // ensure setAnalysis is async and awaited
       _canContinue = true;
+      _lastError = null;
       notifyListeners();
       return true;
     } catch (e, st) {
-      if (e is StateError && e.message == 'SERVER_BUSY') {
-        _lastError = 'Servers are busy. Please try again in a moment.';
-      } else {
-        _lastError = e.toString();
-      }
+      debugPrint('runAnalysis error: $e\n$st');
+      _lastError = e.toString();
       _canContinue = false;
       notifyListeners();
       return false;
@@ -197,26 +214,6 @@ class ContentProvider extends ChangeNotifier {
       _isAnalyzing = false;
       notifyListeners();
     }
-  }
-
-  Future<void> _doRunAnalysis() async {
-    if ((_rawText ?? '').trim().isEmpty) {
-      throw StateError('No transcript to analyze');
-    }
-    final url = Uri.parse('http://10.0.2.2:8000/analyze');
-    final resp = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode({'text': _rawText}),
-    );
-    if (resp.statusCode == 503) {
-      throw StateError('SERVER_BUSY');
-    }
-    if (resp.statusCode != 200) {
-      throw StateError('Analyze failed: ${resp.statusCode}');
-    }
-    final map = json.decode(resp.body) as Map<String, dynamic>;
-    await setAnalysis(map);
   }
 
   // --- Progress mutations ---

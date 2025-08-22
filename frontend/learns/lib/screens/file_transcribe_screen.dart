@@ -32,6 +32,8 @@ class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
 
   final _svc = TranscriptionService();
 
+  ContentProvider get _provider => context.read<ContentProvider>();
+
   @override
   void initState() {
     super.initState();
@@ -57,28 +59,12 @@ class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
     }
   }
 
-  Future<void> _continue() async {
-    final p = context.read<ContentProvider>();
-    if (_busy || p.isAnalyzing) return;
-    setState(() => _busy = true);
-    final ok = await p.runAnalysis();
-    if (!mounted) return;
-    setState(() => _busy = false);
-    if (ok) {
-      Navigator.of(context).pushNamed(Routes.analysis);
-    } else {
-      final msg = p.lastError ?? 'Analysis failed. Please try again.';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(msg)),
-      );
-    }
-  }
+  // Analysis is triggered directly from the button using [_provider].
 
   @override
   Widget build(BuildContext context) {
     final transcriptExists =
         context.select<ContentProvider, bool>((p) => p.rawText?.isNotEmpty ?? false);
-    final isAnalyzing = context.watch<ContentProvider>().isAnalyzing;
 
     return Scaffold(
       appBar: AppBar(title: Text(widget.appBarTitle)),
@@ -101,16 +87,32 @@ class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
             if (_error != null)
               Text(_error!, style: const TextStyle(color: Colors.red)),
             const Spacer(),
-            if (isAnalyzing) const CircularProgressIndicator(),
+            if (context.watch<ContentProvider>().isAnalyzing)
+              const Padding(
+                padding: EdgeInsets.only(bottom: 12),
+                child: LinearProgressIndicator(),
+              ),
             PrimaryButton(
               label: transcriptExists
-                  ? (isAnalyzing ? 'Analyzing…' : 'Continue')
+                  ? (context.watch<ContentProvider>().isAnalyzing ? 'Analyzing…' : 'Continue')
                   : (_busy ? 'Transcribing…' : 'Transcribe'),
-              onPressed: transcriptExists && !isAnalyzing
-                  ? _continue
-                  : (!transcriptExists && !_busy)
-                      ? _run
-                      : null,
+              onPressed: transcriptExists
+                  ? context.watch<ContentProvider>().isAnalyzing
+                      ? null
+                      : () async {
+                          final ok = await _provider.runAnalysis();
+                          if (!mounted) return;
+                          if (ok) {
+                            Navigator.of(context).pushNamed(Routes.studyPack);
+                          } else {
+                            final msg =
+                                _provider.lastError ?? 'Analyze failed.';
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(msg)),
+                            );
+                          }
+                        }
+                  : (!_busy ? _run : null),
             ),
           ],
         ),
