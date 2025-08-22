@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-
 import '../widgets/method_card.dart';
 import '../constants.dart';
-import '../content_provider.dart';
 
 /// Lists the available study methods. Each card navigates to its
 /// corresponding screen using a named route.
@@ -12,7 +9,6 @@ class MethodSelectionScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final summaries = context.watch<ContentProvider>().activitySummaries;
     return Scaffold(
       appBar: AppBar(title: const Text('Study Methods')),
       body: Padding(
@@ -23,7 +19,6 @@ class MethodSelectionScreen extends StatelessWidget {
               icon: Icons.lightbulb_outline,
               title: 'Deep Understanding',
               description: 'Listen to explanations and see concept maps.',
-              summary: summaries['deep_understanding'],
               onTap: () =>
                   Navigator.pushNamed(context, Routes.deepUnderstanding),
             ),
@@ -31,14 +26,12 @@ class MethodSelectionScreen extends StatelessWidget {
               icon: Icons.memory,
               title: 'Memorization',
               description: 'Use flashcards to remember key points.',
-              summary: summaries['memorization'],
               onTap: () => Navigator.pushNamed(context, Routes.memorization),
             ),
             MethodCard(
               icon: Icons.share,
               title: 'Contextual Association',
               description: 'Relate concepts to real-life scenarios.',
-              summary: summaries['contextual_association'],
               onTap: () =>
                   Navigator.pushNamed(context, Routes.contextualAssociation),
             ),
@@ -46,7 +39,6 @@ class MethodSelectionScreen extends StatelessWidget {
               icon: Icons.quiz,
               title: 'Interactive Evaluation',
               description: 'Answer quiz questions to test knowledge.',
-              summary: summaries['interactive_evaluation'],
               onTap: () =>
                   Navigator.pushNamed(context, Routes.interactiveEvaluation),
             ),

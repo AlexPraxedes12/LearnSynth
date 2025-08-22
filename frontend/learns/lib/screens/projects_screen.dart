@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../content_provider.dart';
 import '../theme/app_theme.dart';
 
 /// Displays the list of saved study content. Replaces the old
@@ -10,8 +8,7 @@ class ProjectsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<ContentProvider>();
-    final items = provider.savedContent;
+    final items = const <String>[];
     return Scaffold(
       appBar: AppBar(title: const Text('Library')),
       body: Padding(
@@ -25,10 +22,7 @@ class ProjectsScreen extends StatelessWidget {
                 itemCount: items.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 12),
                 itemBuilder: (context, index) {
-                  final item = items[index];
-                  final title = item.filePath != null
-                      ? item.filePath!.split(RegExp(r'[\\/]')).last
-                      : item.content?.split('\n').first.trim() ?? 'Untitled';
+                  final title = items[index];
                   return Card(
                     color: AppTheme.accentGray,
                     child: ListTile(
