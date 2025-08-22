@@ -10,8 +10,11 @@ services:
     env_file:
       - .env   
     environment:
-      - LLM_PROVIDER=${LLM_PROVIDER:-anthropic}
-      - OPENAI_BASE_URL=https://api.openai.com/v1
-      - OPENAI_TRANSCRIBE_MODEL=whisper-1
-      - OPENAI_API_KEY=${OPENAI_API_KEY}     # lee tu .env (la de arriba, no la de "not-needed")
-      - MAX_MEDIA_BYTES=104857600               # 100 MB
+    - LLM_PROVIDER=${LLM_PROVIDER:-anthropic}
+    - LLM_FALLBACK_PROVIDER=${LLM_FALLBACK_PROVIDER:-openai}
+    - OPENAI_API_KEY=${OPENAI_API_KEY}
+    - OPENAI_MODEL=${OPENAI_MODEL}
+    - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    - ANTHROPIC_MODEL=${ANTHROPIC_MODEL}
+    - OPENAI_TRANSCRIBE_MODEL=${OPENAI_TRANSCRIBE_MODEL}
+    - OPENAI_BASE_URL=https://api.openai.com/v1         # 100 MB
