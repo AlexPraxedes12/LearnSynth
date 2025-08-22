@@ -23,7 +23,7 @@ class _LoadingScreenState extends State<LoadingScreen> {
   void initState() {
     super.initState();
     final provider = context.read<ContentProvider>();
-    if (provider.hasSummary) {
+    if (provider.summary?.isNotEmpty ?? false) {
       WidgetsBinding.instance.addPostFrameCallback(
         (_) => Navigator.pushNamed(context, Routes.analysis),
       );
