@@ -4,13 +4,11 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 
+import '../constants.dart';
 import '../content_provider.dart';
 import '../services/transcription_service.dart';
 import '../widgets/primary_button.dart';
-import 'analysis_screen.dart';
 
 class FileTranscribeScreen extends StatefulWidget {
   final String appBarTitle;
@@ -29,7 +27,6 @@ class FileTranscribeScreen extends StatefulWidget {
 
 class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
   bool _busy = false;
-  bool _analyzing = false;
   String? _error;
   File? _picked;
 
@@ -51,7 +48,7 @@ class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
       final out = await _svc.sendFile(_picked!);
       if (!mounted) return;
       final provider = context.read<ContentProvider>();
-      provider.rawText = out;
+      provider.setTranscript(out);
       provider.content = out;
     } catch (e) {
       setState(() => _error = 'Transcription failed: $e');
@@ -61,43 +58,31 @@ class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
   }
 
   Future<void> _continue() async {
-    if (!mounted) return;
-    final provider = context.read<ContentProvider>();
+    final p = context.read<ContentProvider>();
+    if (p.isAnalyzing) return;
+    setState(() => _busy = true);
     try {
-      setState(() => _analyzing = true);
-      final url = Uri.parse('http://10.0.2.2:8000/analyze');
-      final resp = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'text': provider.rawText ?? provider.content}),
-      );
-      if (resp.statusCode == 200) {
-        final data = jsonDecode(resp.body) as Map<String, dynamic>;
-        provider.setAnalysis(data);
-        if (!mounted) return;
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const AnalysisScreen()),
-        );
-      } else {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Analysis failed: ${resp.statusCode}')),
-        );
+      if ((_picked?.path ?? '').isNotEmpty && (p.rawText ?? '').isEmpty) {
+        // transcript should already be stored after transcribe
       }
+      await p.runAnalysis();
+      if (!mounted) return;
+      Navigator.of(context).pushNamed(Routes.studyPack);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Analysis failed: $e')),
       );
     } finally {
-      if (mounted) setState(() => _analyzing = false);
+      if (mounted) setState(() => _busy = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final canContinue =
-        context.select<ContentProvider, bool>((p) => p.content?.isNotEmpty ?? false);
+    final transcriptExists =
+        context.select<ContentProvider, bool>((p) => p.rawText?.isNotEmpty ?? false);
+    final isAnalyzing = context.watch<ContentProvider>().isAnalyzing;
 
     return Scaffold(
       appBar: AppBar(title: Text(widget.appBarTitle)),
@@ -120,13 +105,14 @@ class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
             if (_error != null)
               Text(_error!, style: const TextStyle(color: Colors.red)),
             const Spacer(),
+            if (isAnalyzing) const CircularProgressIndicator(),
             PrimaryButton(
-              label: canContinue
-                  ? (_analyzing ? 'Analyzing…' : 'Continue')
+              label: transcriptExists
+                  ? (isAnalyzing ? 'Analyzing…' : 'Continue')
                   : (_busy ? 'Transcribing…' : 'Transcribe'),
-              onPressed: (canContinue && !_analyzing)
+              onPressed: transcriptExists && !isAnalyzing
                   ? _continue
-                  : (!canContinue && !_busy)
+                  : (!transcriptExists && !_busy)
                       ? _run
                       : null,
             ),
