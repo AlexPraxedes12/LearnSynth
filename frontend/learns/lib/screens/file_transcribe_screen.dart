@@ -59,22 +59,18 @@ class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
 
   Future<void> _continue() async {
     final p = context.read<ContentProvider>();
-    if (p.isAnalyzing) return;
+    if (_busy || p.isAnalyzing) return;
     setState(() => _busy = true);
-    try {
-      if ((_picked?.path ?? '').isNotEmpty && (p.rawText ?? '').isEmpty) {
-        // transcript should already be stored after transcribe
-      }
-      await p.runAnalysis();
-      if (!mounted) return;
-      Navigator.of(context).pushNamed(Routes.studyPack);
-    } catch (e) {
-      if (!mounted) return;
+    final ok = await p.runAnalysis();
+    if (!mounted) return;
+    setState(() => _busy = false);
+    if (ok) {
+      Navigator.of(context).pushNamed(Routes.analysis);
+    } else {
+      final msg = p.lastError ?? 'Analysis failed. Please try again.';
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Analysis failed: $e')),
+        SnackBar(content: Text(msg)),
       );
-    } finally {
-      if (mounted) setState(() => _busy = false);
     }
   }
 

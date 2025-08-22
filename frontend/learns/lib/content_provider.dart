@@ -39,7 +39,9 @@ class ContentProvider extends ChangeNotifier {
   String? _rawText; // raw transcript text
 
   bool _isAnalyzing = false;
-  Future<void>? _inflightAnalysis;
+  bool _canContinue = false;
+  String? _lastError;
+  Future<bool>? _inflightAnalysis;
 
   // --- Content ---
   String? _summary;
@@ -69,7 +71,8 @@ class ContentProvider extends ChangeNotifier {
   String get contentHash => _contentHash;
 
   bool get isAnalyzing => _isAnalyzing;
-  bool get canContinue => _summary?.isNotEmpty == true;
+  bool get canContinue => _canContinue;
+  String? get lastError => _lastError;
 
   bool get hasAnyContent =>
       (_summary?.isNotEmpty ?? false) ||
@@ -164,24 +167,32 @@ class ContentProvider extends ChangeNotifier {
     return [];
   }
 
-  Future<void> runAnalysis() {
+  Future<bool> runAnalysis() {
     if (_inflightAnalysis != null) return _inflightAnalysis!;
+    _inflightAnalysis = _runAnalysisInternal()
+      ..whenComplete(() => _inflightAnalysis = null);
+    return _inflightAnalysis!;
+  }
 
-    final completer = Completer<void>();
+  Future<bool> _runAnalysisInternal() async {
+    if (_isAnalyzing) return _canContinue;
     _isAnalyzing = true;
+    _lastError = null;
     notifyListeners();
-
-    _inflightAnalysis = _doRunAnalysis().then((_) {
-      completer.complete();
-    }).catchError((e, st) {
-      completer.completeError(e, st);
-    }).whenComplete(() {
-      _isAnalyzing = false;
-      _inflightAnalysis = null;
+    try {
+      await _doRunAnalysis();
+      _canContinue = true;
       notifyListeners();
-    });
-
-    return completer.future;
+      return true;
+    } catch (e, st) {
+      _lastError = e.toString();
+      _canContinue = false;
+      notifyListeners();
+      return false;
+    } finally {
+      _isAnalyzing = false;
+      notifyListeners();
+    }
   }
 
   Future<void> _doRunAnalysis() async {
@@ -231,6 +242,8 @@ class ContentProvider extends ChangeNotifier {
     _deepDone = false;
     _quizScore = 0;
     _contentHash = '';
+    _canContinue = false;
+    _lastError = null;
     notifyListeners();
   }
 }
