@@ -4,6 +4,8 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 import 'package:provider/provider.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 import '../content_provider.dart';
 import '../services/transcription_service.dart';
@@ -48,7 +50,9 @@ class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
     try {
       final out = await _svc.sendFile(_picked!);
       if (!mounted) return;
-      context.read<ContentProvider>().setTranscript(out);
+      final provider = context.read<ContentProvider>();
+      provider.rawText = out;
+      provider.content = out;
     } catch (e) {
       setState(() => _error = 'Transcription failed: $e');
     } finally {
@@ -61,11 +65,25 @@ class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
     final provider = context.read<ContentProvider>();
     try {
       setState(() => _analyzing = true);
-      await provider.runAnalysis(); // stores provider.analysis
-      if (!mounted) return;
-      Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const AnalysisScreen()),
+      final url = Uri.parse('http://10.0.2.2:8000/analyze');
+      final resp = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'text': provider.rawText ?? provider.content}),
       );
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body) as Map<String, dynamic>;
+        provider.setAnalysis(data);
+        if (!mounted) return;
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const AnalysisScreen()),
+        );
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Analysis failed: ${resp.statusCode}')),
+        );
+      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -79,7 +97,7 @@ class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
   @override
   Widget build(BuildContext context) {
     final canContinue =
-        context.select<ContentProvider, bool>((p) => p.hasTranscript);
+        context.select<ContentProvider, bool>((p) => p.content?.isNotEmpty ?? false);
 
     return Scaffold(
       appBar: AppBar(title: Text(widget.appBarTitle)),

@@ -1,54 +1,55 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
-import '../widgets/flashcard_widget.dart';
-import '../widgets/wide_button.dart';
-import '../constants.dart';
 import '../content_provider.dart';
 
-/// Presents flashcard‑style activities for memorization. Buttons for
-/// grading difficulty are included. Completion navigates to the
-/// progress screen via [Navigator.pushNamed].
-class MemorizationScreen extends StatelessWidget {
+class MemorizationScreen extends StatefulWidget {
   const MemorizationScreen({super.key});
+  @override
+  State<MemorizationScreen> createState() => _MemorizationScreenState();
+}
+
+class _MemorizationScreenState extends State<MemorizationScreen> {
+  int i = 0;
 
   @override
   Widget build(BuildContext context) {
-    final pack = context.watch<ContentProvider>().studyPack;
-    final cards = (pack?['flashcards'] is List)
-        ? List<Map<String, dynamic>>.from(pack!['flashcards'])
-        : const [];
+    final p = context.watch<ContentProvider>();
+    final cards = p.flashcards;
     return Scaffold(
-      appBar: AppBar(title: const Text('Memorization')),
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          children: [
-            if (cards.isNotEmpty)
-              Expanded(
-                child: ListView.separated(
-                  itemCount: cards.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 16),
-                  itemBuilder: (context, index) {
-                    final c = cards[index];
-                    return FlashcardWidget(
-                      question: c['question']?.toString() ?? c['term']?.toString() ?? '',
-                      answer: c['answer']?.toString() ?? c['definition']?.toString() ?? '',
-                    );
-                  },
-                ),
-              )
-            else
-              const Text('No flashcards generated'),
-            const SizedBox(height: 16),
-            WideButton(
-              label: 'Complete Session',
-              onPressed: () =>
-                  Navigator.pushNamed(context, Routes.progress),
+      appBar: AppBar(title: const Text('Flashcards')),
+      body: cards.isEmpty
+          ? const Center(child: Text('No flashcards available'))
+          : Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Text('Term: ${cards[i].term}',
+                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 12),
+                  Text('Definition: ${cards[i].definition}'),
+                  const Spacer(),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: i > 0 ? () => setState(() => i--) : null,
+                          child: const Text('Prev'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: i < cards.length - 1
+                              ? () => setState(() => i++)
+                              : null,
+                          child: const Text('Next'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ],
-        ),
-      ),
     );
   }
 }

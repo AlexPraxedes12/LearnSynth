@@ -1,51 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
-import '../widgets/wide_button.dart';
-import '../constants.dart';
 import '../content_provider.dart';
-import '../widgets/key_value_card.dart';
 
-/// Encourages users to relate concepts to real‑world scenarios. Once
-/// complete, navigation continues to the progress screen using
-/// [Navigator.pushNamed].
 class ContextualAssociationScreen extends StatelessWidget {
   const ContextualAssociationScreen({super.key});
-
   @override
   Widget build(BuildContext context) {
-    final pack = context.watch<ContentProvider>().studyPack;
-    final exercises = (pack?['contextual_association'] is List)
-        ? List<Map<String, dynamic>>.from(pack!['contextual_association'])
-        : const [];
+    final terms = context.watch<ContentProvider>().conceptMap;
     return Scaffold(
-      appBar: AppBar(title: const Text('Contextual Association')),
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          children: [
-            if (exercises.isNotEmpty)
-              Expanded(
-                child: ListView.separated(
-                  itemCount: exercises.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 16),
-                  itemBuilder: (context, index) {
-                    final ex = exercises[index];
-                    return KeyValueCard(data: ex);
-                  },
-                ),
-              )
-            else
-              const Center(child: Text('No exercises generated.')),
-            const SizedBox(height: 16),
-            WideButton(
-              label: 'Complete Session',
-              onPressed: () =>
-                  Navigator.pushNamed(context, Routes.progress),
+      appBar: AppBar(title: const Text('Concept Map')),
+      body: terms.isEmpty
+          ? const Center(child: Text('No concepts available'))
+          : Padding(
+              padding: const EdgeInsets.all(16),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: terms.map((t) => Chip(label: Text(t))).toList(),
+              ),
             ),
-          ],
-        ),
-      ),
     );
   }
 }

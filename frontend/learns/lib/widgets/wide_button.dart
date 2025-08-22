@@ -7,16 +7,21 @@ class WideButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final enabled = onPressed != null;
     return SizedBox(
-      width: double.infinity,
       height: 52,
+      width: double.infinity,
       child: ElevatedButton(
+        onPressed: onPressed,
         style: ElevatedButton.styleFrom(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          backgroundColor:
+              enabled ? Theme.of(context).colorScheme.primary : Colors.grey.shade700,
+          foregroundColor: Colors.white,
         ),
-        onPressed: onPressed,
         child: Text(label),
       ),
     );
   }
 }
+

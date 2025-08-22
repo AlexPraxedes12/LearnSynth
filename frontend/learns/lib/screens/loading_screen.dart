@@ -23,7 +23,7 @@ class _LoadingScreenState extends State<LoadingScreen> {
   void initState() {
     super.initState();
     final provider = context.read<ContentProvider>();
-    if (provider.summary != null && provider.summary!.isNotEmpty) {
+    if (provider.hasSummary) {
       WidgetsBinding.instance.addPostFrameCallback(
         (_) => Navigator.pushNamed(context, Routes.analysis),
       );
@@ -43,38 +43,7 @@ class _LoadingScreenState extends State<LoadingScreen> {
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        provider.setAnalysis(
-          data['summary'] as String? ?? '',
-          List<String>.from(data['topics'] as List? ?? []),
-        );
-        provider.setFlashcards(
-          (data['flashcards'] as List? ?? [])
-              .map<Map<String, String>>(
-                  (e) => Map<String, String>.from(e as Map))
-              .toList(),
-        );
-        final conceptMap = data['concept_map'] as Map?;
-        if (conceptMap != null) {
-          provider.setConceptMap(Map<String, dynamic>.from(conceptMap));
-        }
-        provider.setContextualExercises(
-          (data['contextual_exercises'] as List? ?? [])
-              .map<Map<String, dynamic>>(
-                  (e) => Map<String, dynamic>.from(e as Map))
-              .toList(),
-        );
-        provider.setEvaluationQuestions(
-          ((data['quiz'] ?? data['evaluation_questions']) as List? ?? [])
-              .map<Map<String, dynamic>>(
-                  (e) => Map<String, dynamic>.from(e as Map))
-              .toList(),
-        );
-        provider.setActivitySummaries(
-          Map<String, String>.from(data['activities'] as Map? ?? {}),
-        );
-        provider.setProgress(
-          Map<String, dynamic>.from(data['progress'] as Map? ?? {}),
-        );
+        provider.setAnalysis(data);
         if (mounted) {
           Navigator.pushNamed(context, Routes.analysis);
         }

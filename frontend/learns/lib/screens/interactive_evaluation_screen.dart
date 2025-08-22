@@ -1,68 +1,82 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
-import '../widgets/quiz_question_card.dart';
-import '../widgets/wide_button.dart';
-import '../constants.dart';
 import '../content_provider.dart';
-import '../widgets/key_value_card.dart';
 
-/// Presents an interactive quiz. After submitting answers, the user can
-/// complete the session which navigates to the progress screen using
-/// [Navigator.pushNamed].
-class InteractiveEvaluationScreen extends StatelessWidget {
+class InteractiveEvaluationScreen extends StatefulWidget {
   const InteractiveEvaluationScreen({super.key});
+  @override
+  State<InteractiveEvaluationScreen> createState() =>
+      _InteractiveEvaluationScreenState();
+}
+
+class _InteractiveEvaluationScreenState
+    extends State<InteractiveEvaluationScreen> {
+  int i = 0;
+  int score = 0;
+  int? selected;
 
   @override
   Widget build(BuildContext context) {
-    final pack = context.watch<ContentProvider>().studyPack;
-    final exercises = (pack?['quiz'] is List)
-        ? List<Map<String, dynamic>>.from(pack!['quiz'])
-        : const [];
+    final p = context.watch<ContentProvider>();
+    final quiz = p.quiz;
+    final q = (quiz.isEmpty) ? null : quiz[i];
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Interactive Evaluation')),
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          children: [
-            if (exercises.isNotEmpty)
-              Expanded(
-                child: ListView.separated(
-                  itemCount: exercises.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 16),
-                  itemBuilder: (context, index) {
-                    final ex = exercises[index];
-                    if (ex.containsKey('choices')) {
-                      return QuizQuestionCard(
-                        question: ex['question'] ?? '',
-                        choices: List<String>.from(ex['choices'] ?? const []),
-                        correctIndex: ex['correctIndex'] as int? ?? 0,
-                      );
-                    }
-                    return KeyValueCard(data: ex);
-                  },
-                ),
-              )
-            else
-              const Center(child: Text('No questions generated.')),
-            const SizedBox(height: 16),
-            WideButton(
-              label: 'Submit',
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Not implemented')),
-                );
-              },
+      appBar: AppBar(title: const Text('Quiz')),
+      body: (q == null)
+          ? const Center(child: Text('No questions available'))
+          : Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Q${i + 1}. ${q.question}',
+                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 12),
+                  ...List.generate(q.options.length, (idx) {
+                    final opt = q.options[idx];
+                    return RadioListTile<int>(
+                      value: idx,
+                      groupValue: selected,
+                      onChanged: (v) => setState(() => selected = v),
+                      title: Text(opt),
+                    );
+                  }),
+                  const Spacer(),
+                  ElevatedButton(
+                    onPressed: selected == null
+                        ? null
+                        : () {
+                            if (selected == q.answer) score++;
+                            if (i < quiz.length - 1) {
+                              setState(() {
+                                i++;
+                                selected = null;
+                              });
+                            } else {
+                              showDialog(
+                                context: context,
+                                builder: (_) => AlertDialog(
+                                  title: const Text('Result'),
+                                  content:
+                                      Text('Score: $score/${quiz.length}'),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.pop(context),
+                                      child: const Text('OK'),
+                                    )
+                                  ],
+                                ),
+                              );
+                            }
+                          },
+                    child:
+                        Text(i < quiz.length - 1 ? 'Next' : 'Finish'),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 16),
-            WideButton(
-              label: 'Complete Session',
-              onPressed: () =>
-                  Navigator.pushNamed(context, Routes.progress),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
