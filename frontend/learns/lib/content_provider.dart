@@ -23,8 +23,12 @@ class QuizItem {
   QuizItem({required this.question, required this.options, required this.answerIndex});
   factory QuizItem.fromMap(Map<String, dynamic> m) {
     final opts = (m['options'] as List? ?? []).map((e) => e.toString()).toList();
-    final ans = (m['answer'] ?? m['answer_index'] ?? 0) as int;
-    return QuizItem(question: (m['question'] ?? '').toString(), options: opts, answerIndex: ans);
+    final raw = m['answer'] ?? m['answer_index'] ?? 0;
+    final ans = raw is int ? raw : int.tryParse(raw.toString()) ?? 0;
+    return QuizItem(
+        question: (m['question'] ?? '').toString(),
+        options: opts,
+        answerIndex: ans);
   }
 }
 
