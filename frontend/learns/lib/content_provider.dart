@@ -185,7 +185,11 @@ class ContentProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e, st) {
-      _lastError = e.toString();
+      if (e is StateError && e.message == 'SERVER_BUSY') {
+        _lastError = 'Servers are busy. Please try again in a moment.';
+      } else {
+        _lastError = e.toString();
+      }
       _canContinue = false;
       notifyListeners();
       return false;
@@ -205,6 +209,9 @@ class ContentProvider extends ChangeNotifier {
       headers: {'Content-Type': 'application/json'},
       body: json.encode({'text': _rawText}),
     );
+    if (resp.statusCode == 503) {
+      throw StateError('SERVER_BUSY');
+    }
     if (resp.statusCode != 200) {
       throw StateError('Analyze failed: ${resp.statusCode}');
     }
