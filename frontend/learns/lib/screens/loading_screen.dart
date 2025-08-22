@@ -3,8 +3,6 @@ import '../widgets/quote_card.dart';
 import '../constants.dart';
 import 'package:provider/provider.dart';
 import '../content_provider.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 
 /// Shows a loading state while content is being processed. Once the
 /// processing is complete, the user can proceed to the analysis
@@ -22,56 +20,20 @@ class _LoadingScreenState extends State<LoadingScreen> {
   @override
   void initState() {
     super.initState();
-    final provider = context.read<ContentProvider>();
-    if (provider.summary?.isNotEmpty ?? false) {
-      WidgetsBinding.instance.addPostFrameCallback(
-        (_) => Navigator.pushNamed(context, Routes.analysis),
-      );
-    } else {
-      _analyze();
-    }
-  }
-
-  Future<void> _analyze() async {
-    final provider = context.read<ContentProvider>();
-    try {
-      final url = Uri.parse('http://10.0.2.2:8000/analyze');
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'text': provider.rawText ?? provider.content}),
-      );
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        provider.setAnalysis(data);
-        if (mounted) {
-          Navigator.pushNamed(context, Routes.analysis);
-        }
-      } else {
-        var message = 'Analysis failed';
-        try {
-          final decoded = jsonDecode(response.body);
-          if (decoded is Map<String, dynamic> && decoded['detail'] != null) {
-            message = decoded['detail'].toString();
-          } else {
-            message = decoded.toString();
-          }
-        } catch (_) {
-          if (response.body.isNotEmpty) message = response.body;
-        }
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(message)),
-          );
-        }
-      }
-    } catch (_) {
-      if (mounted) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final p = context.read<ContentProvider>();
+      try {
+        await p.runAnalysis();
+        if (!mounted) return;
+        Navigator.of(context).pushReplacementNamed(Routes.studyPack);
+      } catch (e) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Network error')),
+          SnackBar(content: Text('Analysis failed: $e')),
         );
+        // Optionally pop or reset UI here
       }
-    }
+    });
   }
 
   @override

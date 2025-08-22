@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
 
 enum StudyMode { memorization, deep_understanding, contextual_association, interactive_evaluation }
 
@@ -32,6 +34,9 @@ class ContentProvider extends ChangeNotifier {
   String? _content; // cleaned text
   String? _rawText; // raw transcript text
 
+  bool _isAnalyzing = false;
+  Future<void>? _inflightAnalysis;
+
   // --- Content ---
   String? _summary;
   List<Flashcard> _flashcards = [];
@@ -59,6 +64,9 @@ class ContentProvider extends ChangeNotifier {
   int get quizScore => _quizScore;
   String get contentHash => _contentHash;
 
+  bool get isAnalyzing => _isAnalyzing;
+  bool get canContinue => _summary?.isNotEmpty == true;
+
   bool get hasAnyContent =>
       (_summary?.isNotEmpty ?? false) ||
       _flashcards.isNotEmpty ||
@@ -73,6 +81,11 @@ class ContentProvider extends ChangeNotifier {
 
   set rawText(String? v) {
     _rawText = v;
+    notifyListeners();
+  }
+
+  void setTranscript(String text) {
+    _rawText = text;
     notifyListeners();
   }
 
@@ -100,36 +113,88 @@ class ContentProvider extends ChangeNotifier {
   }
 
   // Normalize various backend shapes to our typed structures.
-  void setAnalysis(Map<String, dynamic> data) async {
-    _summary = (data['summary'] ?? '').toString().trim();
+  Future<void> setAnalysis(Map<String, dynamic> data) async {
+    try {
+      _summary = (data['summary'] ?? '').toString().trim();
+      _flashcards = _coerceFlashcards(data['flashcards'] ?? data['cards']);
+      _quizzes = _coerceQuiz(data['quizzes'] ?? data['quiz'] ?? data['questions']);
+      _conceptTopics = _coerceTopics(
+          data['concept_map'] ?? data['conceptMap'] ?? data['topics']);
+      _deepPrompts =
+          (data['deep_prompts'] ?? data['deep'] ?? [])
+              .map((e) => e.toString())
+              .toList();
 
-    final fc = (data['flashcards'] ?? data['cards'] ?? []) as List? ?? [];
-    _flashcards = fc.map((e) => Flashcard.fromMap(Map<String, dynamic>.from(e as Map))).toList();
+      final baseForHash = _summary?.isNotEmpty == true
+          ? _summary!
+          : _flashcards.map((f) => f.term).join('|');
+      _contentHash = baseForHash.isNotEmpty ? _hash(baseForHash) : '';
 
-    final rawTopics = data['concept_map'] ?? data['topics'] ?? [];
-    if (rawTopics is List) {
-      _conceptTopics = rawTopics.map((e) => e.toString()).toList();
-    } else if (rawTopics is Map) {
-      _conceptTopics = rawTopics.values.map((e) => e.toString()).toList();
-    } else {
-      _conceptTopics = [];
+      await _saveProgress();
+      notifyListeners();
+    } catch (e, st) {
+      rethrow;
     }
+  }
 
-    final rawDeep = data['deep_prompts'] ?? data['deep'] ?? [];
-    _deepPrompts = (rawDeep as List? ?? []).map((e) => e.toString()).toList();
+  List<Flashcard> _coerceFlashcards(dynamic raw) {
+    final list = (raw as List? ?? []);
+    return list
+        .map((e) => Flashcard.fromMap(Map<String, dynamic>.from(e as Map)))
+        .toList();
+  }
 
-    final rawQuiz = data['quizzes'] ?? data['quiz'] ?? data['questions'] ?? [];
-    _quizzes = (rawQuiz as List? ?? [])
+  List<QuizItem> _coerceQuiz(dynamic raw) {
+    final list = (raw as List? ?? []);
+    return list
         .map((e) => QuizItem.fromMap(Map<String, dynamic>.from(e as Map)))
         .toList();
+  }
 
-    final baseForHash = _summary?.isNotEmpty == true
-        ? _summary!
-        : _flashcards.map((f) => f.term).join('|');
-    _contentHash = baseForHash.isNotEmpty ? _hash(baseForHash) : '';
+  List<String> _coerceTopics(dynamic raw) {
+    if (raw is List) {
+      return raw.map((e) => e.toString()).toList();
+    } else if (raw is Map) {
+      return raw.values.map((e) => e.toString()).toList();
+    }
+    return [];
+  }
 
-    await _loadProgress();
+  Future<void> runAnalysis() {
+    if (_inflightAnalysis != null) return _inflightAnalysis!;
+
+    final completer = Completer<void>();
+    _isAnalyzing = true;
     notifyListeners();
+
+    _inflightAnalysis = _doRunAnalysis().then((_) {
+      completer.complete();
+    }).catchError((e, st) {
+      completer.completeError(e, st);
+    }).whenComplete(() {
+      _isAnalyzing = false;
+      _inflightAnalysis = null;
+      notifyListeners();
+    });
+
+    return completer.future;
+  }
+
+  Future<void> _doRunAnalysis() async {
+    if ((_rawText ?? '').trim().isEmpty) {
+      throw StateError('No transcript to analyze');
+    }
+    final url = Uri.parse('http://10.0.2.2:8000/analyze');
+    final resp = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({'text': _rawText}),
+    );
+    if (resp.statusCode != 200) {
+      throw StateError('Analyze failed: ${resp.statusCode}');
+    }
+    final map = json.decode(resp.body) as Map<String, dynamic>;
+    await setAnalysis(map);
   }
 
   // --- Progress mutations ---
