@@ -96,6 +96,8 @@ def analyze_text(text: str = Body(..., embed=True)):
             or data.get("spacedRepetition", []),
             "progress": data.get("progress", {"completion": 0.0, "masteryLevel": ""}),
         }
+    except HTTPException as e:
+        raise e
     except Exception as exc:
         logger.exception("Analysis failed: %s", exc)
         raise HTTPException(status_code=500, detail="Internal server error")
