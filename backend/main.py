@@ -14,19 +14,22 @@ from typing import Literal
 from pydantic import BaseModel
 
 from app.services import generator, srs, concept_map, exporter, tts
-from app.utils.llm import ask_llm
+from app.utils.llm import ask_llm, make_deep_prompts
 from app.models import ReviewInput, ExportInput
 
 class StudyRequest(BaseModel):
     """Request model for study mode generation."""
 
     text: str
+    # `mode` is optional; when omitted we default to the deep understanding
+    # bundle used by the mobile app. Existing clients may still specify an
+    # explicit mode for legacy behaviours.
     mode: Literal[
         "memorization",
         "deep_understanding",
         "contextual_association",
         "interactive_evaluation",
-    ]
+    ] | None = None
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -105,7 +108,28 @@ def analyze_text(text: str = Body(..., embed=True)):
 
 @app.post('/study-mode', tags=["Study"])
 def study_mode(data: StudyRequest):
-    """Generate study materials in the requested mode."""
+    """Generate study materials in the requested mode.
+
+    Minimal smoke test for deep prompts:
+    ``
+    curl -s http://localhost:8000/study-mode -X POST -H 'Content-Type: application/json' \
+      -d '{"text":"short sample"}' | jq '.deep_prompts | length'
+    ``
+    Should output an integer \u2265 3.
+    """
+
+    # Default behaviour (mode omitted or "deep_understanding"): return the
+    # concept map along with reflective prompts.
+    if not data.mode or data.mode == "deep_understanding":
+        try:
+            return {
+                "conceptMap": concept_map.generate_concept_map(data.text),
+                "deep_prompts": make_deep_prompts(data.text),
+            }
+        except Exception as exc:
+            logger.exception("Concept map generation failed: %s", exc)
+            raise HTTPException(status_code=500, detail="Internal server error")
+
     if data.mode == "memorization":
         prompt = (
             "Create flashcard question-answer pairs as JSON in the form "
@@ -123,13 +147,6 @@ def study_mode(data: StudyRequest):
                 return {"flashcards": result}
         except Exception as exc:
             logger.exception("Flashcard generation failed: %s", exc)
-            raise HTTPException(status_code=500, detail="Internal server error")
-
-    if data.mode == "deep_understanding":
-        try:
-            return {"conceptMap": concept_map.generate_concept_map(data.text)}
-        except Exception as exc:
-            logger.exception("Concept map generation failed: %s", exc)
             raise HTTPException(status_code=500, detail="Internal server error")
 
     if data.mode == "contextual_association":

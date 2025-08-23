@@ -34,7 +34,7 @@ class _MethodSelectionScreenState extends State<MethodSelectionScreen> {
   @override
   Widget build(BuildContext context) {
     final p = context.watch<ContentProvider>();
-    final canDeep = p.canDeep;
+    final canDeep = p.hasDeep;
     final canConcept = p.canConcept;
 
     return Scaffold(
