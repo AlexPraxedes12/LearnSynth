@@ -41,11 +41,14 @@ class ContentProvider extends ChangeNotifier {
   // --- Source inputs ---
   String? _content; // cleaned text
   String? _rawText; // raw transcript text
-
+  File? _selectedAudio;
   bool _isAnalyzing = false;
+  bool _canContinue = false;
   String? _lastError;
 
+  File? get selectedAudio => _selectedAudio;
   bool get isAnalyzing => _isAnalyzing;
+  bool get canContinue => _canContinue;
   String? get lastError => _lastError;
 
   Future<bool>? _inflight;
@@ -86,7 +89,11 @@ class ContentProvider extends ChangeNotifier {
       _conceptTopics.isNotEmpty ||
       _quizzes.isNotEmpty;
 
-  bool get canContinue => hasAnalysis;
+  // Convenience flags for content availability
+  bool get hasMemorization => _flashcards.isNotEmpty;
+  bool get hasDeepUnderstanding => _deepPrompts.isNotEmpty;
+  bool get hasContextualAssociation => _conceptTopics.isNotEmpty;
+  bool get hasQuiz => _quizzes.isNotEmpty;
 
   set content(String? v) {
     _content = v;
@@ -161,6 +168,7 @@ class ContentProvider extends ChangeNotifier {
   Future<bool> _runAnalysisInternal({String? textOverride}) async {
     _isAnalyzing = true;
     _lastError = null;
+    _canContinue = false;
     notifyListeners();
 
     try {
@@ -207,43 +215,50 @@ class ContentProvider extends ChangeNotifier {
       _contentHash = baseForHash.isNotEmpty ? _hash(baseForHash) : '';
 
       await _saveProgress();
+      _canContinue = true;
       return true;
     } catch (e) {
       _lastError = e.toString();
+      _canContinue = false;
       return false;
     } finally {
       _isAnalyzing = false;
       notifyListeners();
     }
   }
-
-  final _svc = TranscriptionService();
-
-  Future<bool> transcribeAndAnalyze(File file) async {
-    if (_isAnalyzing) return false;
-
-    _isAnalyzing = true;
+  Future<void> transcribeAndAnalyze(File file) async {
+    _selectedAudio = file;
+    _rawText = null;
+    _content = null;
     _lastError = null;
+    _canContinue = false;
+    _isAnalyzing = true;
     notifyListeners();
 
     try {
-      final text = await _svc.sendFile(file);
-      _rawText = (text).trim();
+      final text = await TranscriptionService().sendFile(file);
+      _rawText = text ?? '';
 
-      if (_rawText!.isEmpty) {
-        _lastError = 'Empty transcription';
-        return false;
-      }
-
-      final ok = await runAnalysis(textOverride: _rawText);
-      return ok;
+      final ok = await runAnalysis();
+      _canContinue = ok == true;
     } catch (e) {
       _lastError = e.toString();
-      return false;
+      _canContinue = false;
+      rethrow;
     } finally {
       _isAnalyzing = false;
       notifyListeners();
     }
+  }
+
+  void resetTranscribeFlow() {
+    _selectedAudio = null;
+    _rawText = null;
+    _content = null;
+    _lastError = null;
+    _isAnalyzing = false;
+    _canContinue = false;
+    notifyListeners();
   }
 
   // --- Progress mutations ---

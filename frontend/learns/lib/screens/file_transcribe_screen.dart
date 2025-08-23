@@ -66,9 +66,9 @@ class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
 
   Future<void> _startAuto() async {
     final provider = context.read<ContentProvider>();
-    final ok = await provider.transcribeAndAnalyze(_picked!);
+    await provider.transcribeAndAnalyze(_picked!);
     if (!mounted) return;
-    if (!ok) {
+    if (!provider.canContinue) {
       final msg = provider.lastError ?? 'Analysis failed';
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
     }
@@ -84,16 +84,17 @@ class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
       _error = null;
       _busy = true;
     });
-    final ok = await context.read<ContentProvider>().transcribeAndAnalyze(f);
+    await context.read<ContentProvider>().transcribeAndAnalyze(f);
     if (!mounted) return;
     setState(() {
       _busy = false;
     });
-    if (!ok) {
+    final provider = context.read<ContentProvider>();
+    if (!provider.canContinue) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            context.read<ContentProvider>().lastError ?? 'Analysis failed',
+            provider.lastError ?? 'Analysis failed',
           ),
         ),
       );
