@@ -25,17 +25,19 @@ class ContextualAssociationScreen extends StatelessWidget {
     ];
 
     Widget chip(String t, Color c) {
-      return ActionChip(
-        label: Text(
-          t,
-          style: TextStyle(color: c, fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: c.withOpacity(0.2),
-        onPressed: () {},
+      return GestureDetector(
         onLongPress: () {
           ScaffoldMessenger.of(context)
               .showSnackBar(SnackBar(content: Text(t)));
         },
+        child: ActionChip(
+          label: Text(
+            t,
+            style: TextStyle(color: c, fontWeight: FontWeight.bold),
+          ),
+          backgroundColor: c.withOpacity(0.2),
+          onPressed: () {},
+        ),
       );
     }
 
