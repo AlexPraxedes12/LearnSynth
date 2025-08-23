@@ -21,5 +21,6 @@ class Routes {
 }
 
 class AppRoutes {
+  static const String analyzing = '/analyzing';
   static const String studyPack = '/studyPack';
 }

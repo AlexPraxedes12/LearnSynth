@@ -4,8 +4,7 @@ import 'package:provider/provider.dart';
 import 'constants.dart';
 import 'theme/app_theme.dart';
 import 'screens/add_content_screen.dart';
-import 'screens/loading_screen.dart';
-import 'screens/analysis_screen.dart';
+import 'screens/analyzing_screen.dart';
 import 'screens/pdf_picker_screen.dart';
 import 'screens/audio_picker_screen.dart';
 import 'screens/video_picker_screen.dart';
@@ -49,11 +48,8 @@ class StudyApp extends StatelessWidget {
         Routes.audio: (_) => const AudioPickerScreen(),
         Routes.videoPicker: (_) => const VideoPickerScreen(),
         Routes.library: (_) => const ProjectsScreen(),
-        Routes.loading: (context) {
-          final text = ModalRoute.of(context)?.settings.arguments as String?;
-          return LoadingScreen();
-        },
-        AppRoutes.studyPack: (_) => const AnalysisScreen(),
+        AppRoutes.analyzing: (_) => const AnalyzingScreen(),
+        AppRoutes.studyPack: (_) => const MethodSelectionScreen(),
         Routes.methodSelection: (_) => const MethodSelectionScreen(),
         Routes.deepUnderstanding: (_) => const DeepUnderstandingScreen(),
         '/deep': (_) => const DeepUnderstandingScreen(),
