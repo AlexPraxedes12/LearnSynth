@@ -23,7 +23,11 @@ class _MethodSelectionScreenState extends State<MethodSelectionScreen> {
 
   @override
   void dispose() {
-    _provider.resetAll();
+    // Reset provider after the widget is fully disposed to avoid triggering
+    // notifications while the widget tree is locked.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _provider.resetAll();
+    });
     super.dispose();
   }
 
