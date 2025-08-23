@@ -12,10 +12,10 @@ class MethodSelectionScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = context.watch<ContentProvider>();
 
-    final enableFlash = p.flashcards.isNotEmpty;
-    final enableDeep = p.deepPrompts.isNotEmpty;
-    final enableConcept = p.conceptTopics.isNotEmpty;
-    final enableQuiz = p.quizzes.isNotEmpty;
+    final enableFlash = p.hasMemorization;
+    final enableDeep = p.hasDeepUnderstanding;
+    final enableConcept = p.hasContextualAssociation;
+    final enableQuiz = p.hasQuiz;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Study Pack')),
