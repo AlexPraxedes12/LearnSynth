@@ -34,6 +34,8 @@ class _MethodSelectionScreenState extends State<MethodSelectionScreen> {
   @override
   Widget build(BuildContext context) {
     final p = context.watch<ContentProvider>();
+    final canDeep = p.canDeep;
+    final canConcept = p.canConcept;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Study Pack')),
@@ -56,16 +58,16 @@ class _MethodSelectionScreenState extends State<MethodSelectionScreen> {
             const SizedBox(height: 12),
             WideButton(
               label: 'Deep Understanding',
-              enabled: p.canDeepUnderstanding,
-              onPressed: p.canDeepUnderstanding
+              enabled: canDeep,
+              onPressed: canDeep
                   ? () => Navigator.pushNamed(context, Routes.deep)
                   : null,
             ),
             const SizedBox(height: 12),
             WideButton(
               label: 'Contextual Association',
-              enabled: p.canContextualAssociation,
-              onPressed: p.canContextualAssociation
+              enabled: canConcept,
+              onPressed: canConcept
                   ? () => Navigator.pushNamed(context, Routes.concept)
                   : null,
             ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../content_provider.dart';
+import '../constants.dart';
 import '../widgets/wide_button.dart';
 
 class AnalysisScreen extends StatelessWidget {
@@ -9,6 +10,8 @@ class AnalysisScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = context.watch<ContentProvider>();
+    final canDeep = p.canDeep;
+    final canConcept = p.canConcept;
     return Scaffold(
       appBar: AppBar(title: const Text('Study Pack')),
       body: Padding(
@@ -24,29 +27,32 @@ class AnalysisScreen extends StatelessWidget {
             WideButton(
               label: 'Memorization (Flashcards)',
               enabled: p.flashcards.isNotEmpty,
-              onPressed: p.flashcards.isEmpty ? null : () => Navigator.pushNamed(context, '/memorization'),
+              onPressed: p.flashcards.isEmpty
+                  ? null
+                  : () => Navigator.pushNamed(context, Routes.memorization),
             ),
             const SizedBox(height: 12),
             WideButton(
               label: 'Deep Understanding',
-              enabled: p.canDeepUnderstanding,
-              onPressed: p.canDeepUnderstanding
-                  ? () => Navigator.pushNamed(context, '/deep')
-                  : null,
+              enabled: canDeep,
+              onPressed:
+                  canDeep ? () => Navigator.pushNamed(context, Routes.deep) : null,
             ),
             const SizedBox(height: 12),
             WideButton(
               label: 'Contextual Association',
-              enabled: p.canContextualAssociation,
-              onPressed: p.canContextualAssociation
-                  ? () => Navigator.pushNamed(context, '/concept')
+              enabled: canConcept,
+              onPressed: canConcept
+                  ? () => Navigator.pushNamed(context, Routes.concept)
                   : null,
             ),
             const SizedBox(height: 12),
             WideButton(
               label: 'Interactive Evaluation (Quiz)',
               enabled: p.quizzes.isNotEmpty,
-              onPressed: p.quizzes.isNotEmpty ? () => Navigator.pushNamed(context, '/quiz') : null,
+              onPressed: p.quizzes.isNotEmpty
+                  ? () => Navigator.pushNamed(context, Routes.quiz)
+                  : null,
             ),
           ],
         ),

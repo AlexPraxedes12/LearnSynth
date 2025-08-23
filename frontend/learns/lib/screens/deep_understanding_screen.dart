@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../constants.dart';
 import '../content_provider.dart';
-import '../widgets/wide_button.dart';
 
 /// Shows one reflective prompt at a time to encourage deeper thinking.
 class DeepUnderstandingScreen extends StatelessWidget {
@@ -11,71 +9,48 @@ class DeepUnderstandingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<ContentProvider>();
-    final prompts = provider.deepPrompts;
-
-    if (prompts.isEmpty) {
+    final p = context.watch<ContentProvider>();
+    final items = p.deepPrompts;
+    if (items.isEmpty) {
+      // Defensive: if someone lands here without data
       return Scaffold(
         appBar: AppBar(title: const Text('Deep Understanding')),
-        body: const Center(child: Text('No deep prompts available.')),
+        body: const Center(
+            child: Text('No deep prompts available for this content.')),
       );
     }
-
-    int index = 0;
     return Scaffold(
       appBar: AppBar(title: const Text('Deep Understanding')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: StatefulBuilder(
-          builder: (context, setState) {
-            final p = prompts[index];
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+      body: PageView.builder(
+        itemCount: items.length,
+        itemBuilder: (_, i) {
+          final it = items[i];
+          return Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(p.prompt,
-                            style: Theme.of(context).textTheme.titleMedium),
-                        if (p.hint.isNotEmpty) ...[
-                          const SizedBox(height: 8),
-                          Text(p.hint,
-                              style: Theme.of(context).textTheme.bodySmall),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    WideButton(
-                      label: 'Prev',
-                      onPressed:
-                          index > 0 ? () => setState(() => index--) : null,
-                    ),
-                    WideButton(
-                      label: 'Next',
-                      onPressed: index < prompts.length - 1
-                          ? () => setState(() => index++)
-                          : null,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                WideButton(
-                  label: 'Complete Session',
-                  onPressed: () =>
-                      Navigator.pushNamed(context, Routes.progress),
-                ),
+                const SizedBox(height: 8),
+                Text(it.prompt,
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.w600)),
+                if (it.hint.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Text(it.hint,
+                      style: const TextStyle(
+                          fontSize: 14, color: Color(0xFFAAAAAA))),
+                ],
+                const Spacer(),
+                Align(
+                  alignment: Alignment.bottomRight,
+                  child: Text('${i + 1} / ${items.length}',
+                      style:
+                          const TextStyle(color: Color(0xFFAAAAAA))),
+                )
               ],
-            );
-          },
-        ),
+            ),
+          );
+        },
       ),
     );
   }
