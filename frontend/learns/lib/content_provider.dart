@@ -42,11 +42,13 @@ class ContentProvider extends ChangeNotifier {
   String? _content; // cleaned text
   String? _rawText; // raw transcript text
   File? _selectedAudio;
+  File? _selectedVideo;
   bool _isAnalyzing = false;
   bool _canContinue = false;
   String? _lastError;
 
   File? get selectedAudio => _selectedAudio;
+  File? get selectedVideo => _selectedVideo;
   bool get isAnalyzing => _isAnalyzing;
   bool get canContinue => _canContinue;
   String? get lastError => _lastError;
@@ -157,6 +159,59 @@ class ContentProvider extends ChangeNotifier {
     return [];
   }
 
+  // --- Selection helpers ---
+  void setSelectedAudio(File f) {
+    _selectedAudio = f;
+    _selectedVideo = null;
+    _rawText = null;
+    _content = null;
+    _lastError = null;
+    _canContinue = false;
+    notifyListeners();
+  }
+
+  void setSelectedVideo(File f) {
+    _selectedVideo = f;
+    _selectedAudio = null;
+    _rawText = null;
+    _content = null;
+    _lastError = null;
+    _canContinue = false;
+    notifyListeners();
+  }
+
+  // Single-flight runner used by the Analyzing screen.
+  Future<void> ensureAnalysisStarted() async {
+    if (_isAnalyzing || _canContinue) return;
+
+    _isAnalyzing = true;
+    _lastError = null;
+    notifyListeners();
+
+    try {
+      if (_selectedAudio != null) {
+        final txt = await TranscriptionService().sendFile(_selectedAudio!);
+        _rawText = txt ?? '';
+      } else if (_selectedVideo != null) {
+        final txt = await TranscriptionService().sendFile(_selectedVideo!);
+        _rawText = txt ?? '';
+      } else if ((_rawText ?? '').isNotEmpty) {
+        // text already provided
+      } else {
+        throw StateError('No file selected');
+      }
+
+      final ok = await runAnalysis();
+      _canContinue = ok == true;
+    } catch (e) {
+      _lastError = e.toString();
+      _canContinue = false;
+    } finally {
+      _isAnalyzing = false;
+      notifyListeners();
+    }
+  }
+
   Future<bool> runAnalysis({String? textOverride}) {
     _inflight ??=
         _runAnalysisInternal(textOverride: textOverride).whenComplete(() {
@@ -226,39 +281,14 @@ class ContentProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
+  // Legacy helpers used by older flows.
   Future<void> transcribeAndAnalyze(File file) async {
-    _selectedAudio = file;
-    _rawText = null;
-    _content = null;
-    _lastError = null;
-    _canContinue = false;
-    _isAnalyzing = true;
-    notifyListeners();
-
-    try {
-      final text = await TranscriptionService().sendFile(file);
-      _rawText = text ?? '';
-
-      final ok = await runAnalysis();
-      _canContinue = ok == true;
-    } catch (e) {
-      _lastError = e.toString();
-      _canContinue = false;
-      rethrow;
-    } finally {
-      _isAnalyzing = false;
-      notifyListeners();
-    }
+    setSelectedAudio(file);
+    await ensureAnalysisStarted();
   }
 
   void resetTranscribeFlow() {
-    _selectedAudio = null;
-    _rawText = null;
-    _content = null;
-    _lastError = null;
-    _isAnalyzing = false;
-    _canContinue = false;
-    notifyListeners();
+    resetAll();
   }
 
   // --- Progress mutations ---
@@ -280,18 +310,24 @@ class ContentProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Optional: clear when new upload/analysis starts
+  // HARD RESET: called when returning to home
   void resetAll() {
+    _selectedAudio = null;
+    _selectedVideo = null;
+    _rawText = null;
+    _content = null;
+    _lastError = null;
+    _isAnalyzing = false;
+    _canContinue = false;
     _summary = null;
-    _flashcards = [];
-    _conceptTopics = [];
-    _deepPrompts = [];
-    _quizzes = [];
+    _flashcards.clear();
+    _deepPrompts.clear();
+    _conceptTopics.clear();
+    _quizzes.clear();
     _flashIndex = 0;
     _deepDone = false;
     _quizScore = 0;
     _contentHash = '';
-    _lastError = null;
     notifyListeners();
   }
 }

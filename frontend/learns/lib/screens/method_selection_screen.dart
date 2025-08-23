@@ -5,8 +5,19 @@ import '../constants.dart';
 import '../content_provider.dart';
 import '../widgets/wide_button.dart';
 
-class MethodSelectionScreen extends StatelessWidget {
+class MethodSelectionScreen extends StatefulWidget {
   const MethodSelectionScreen({super.key});
+
+  @override
+  State<MethodSelectionScreen> createState() => _MethodSelectionScreenState();
+}
+
+class _MethodSelectionScreenState extends State<MethodSelectionScreen> {
+  @override
+  void dispose() {
+    context.read<ContentProvider>().resetAll();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
