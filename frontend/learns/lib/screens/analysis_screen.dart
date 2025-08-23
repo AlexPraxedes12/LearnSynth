@@ -10,7 +10,7 @@ class AnalysisScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = context.watch<ContentProvider>();
-    final canDeep = p.canDeep;
+    final canDeep = p.hasDeep;
     final canConcept = p.canConcept;
     return Scaffold(
       appBar: AppBar(title: const Text('Study Pack')),

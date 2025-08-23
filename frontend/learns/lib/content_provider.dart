@@ -12,14 +12,14 @@ import 'services/transcription_service.dart';
 /// ----- New typed models -----
 class DeepPrompt {
   final String prompt;
-  final String hint;
-  DeepPrompt({required this.prompt, required this.hint});
-  factory DeepPrompt.fromMap(Map<String, dynamic> m) {
-    final p =
-        (m['prompt'] ?? m['text'] ?? m['question'] ?? '').toString().trim();
-    final h = (m['hint'] ?? m['explanation'] ?? '').toString().trim();
-    return DeepPrompt(prompt: p, hint: h);
-  }
+  final String? hint;
+  DeepPrompt({required this.prompt, this.hint});
+  factory DeepPrompt.fromMap(Map<String, dynamic> m) => DeepPrompt(
+        prompt: (m['prompt'] ?? m['text'] ?? m['question'] ?? '')
+            .toString()
+            .trim(),
+        hint: (m['hint'] ?? m['explanation'])?.toString().trim(),
+      );
 }
 
 class ConceptGroup {
@@ -91,6 +91,7 @@ class ContentProvider extends ChangeNotifier {
 
   // --- Progress (lightweight) ---
   int _flashIndex = 0;
+  int _deepIndex = 0;
   bool _deepDone = false;
   int _quizScore = 0;
   String _contentHash = '';
@@ -100,7 +101,7 @@ class ContentProvider extends ChangeNotifier {
   String? get rawText => _rawText;
   String? get summary => _summary?.isNotEmpty == true ? _summary : null;
   List<Flashcard> get flashcards => _flashcards;
-  List<DeepPrompt> get deepPrompts => _deepPrompts;
+  List<DeepPrompt> get deepPrompts => List.unmodifiable(_deepPrompts);
   List<ConceptGroup> get conceptGroups => List.unmodifiable(_conceptGroups);
   List<String> get conceptTopics => _conceptGroups.isEmpty
       ? List<String>.from(_conceptTopics)
@@ -108,13 +109,15 @@ class ContentProvider extends ChangeNotifier {
   bool get hasConceptGroups => _conceptGroups.isNotEmpty;
 
   // Availability flags used by CTAs
-  bool get canDeep => _deepPrompts.isNotEmpty; // drives Study Pack CTA
+  bool get hasDeep => _deepPrompts.isNotEmpty;
+  bool get canDeep => hasDeep; // deprecated alias
   bool get canConcept =>
       _conceptGroups.isNotEmpty || _conceptTopics.isNotEmpty; // drives CTA
 
   List<QuizItem> get quizzes => _quizzes;
 
   int get flashIndex => _flashIndex;
+  int get deepIndex => _deepIndex;
   bool get deepDone => _deepDone;
   int get quizScore => _quizScore;
   String get contentHash => _contentHash;
@@ -160,6 +163,7 @@ class ContentProvider extends ChangeNotifier {
     if (_contentHash.isEmpty) return;
     final sp = await SharedPreferences.getInstance();
     await sp.setInt('$_contentHash/flashIndex', _flashIndex);
+    await sp.setInt('$_contentHash/deepIndex', _deepIndex);
     await sp.setBool('$_contentHash/deepDone', _deepDone);
     await sp.setInt('$_contentHash/quizScore', _quizScore);
   }
@@ -168,6 +172,7 @@ class ContentProvider extends ChangeNotifier {
     if (_contentHash.isEmpty) return;
     final sp = await SharedPreferences.getInstance();
     _flashIndex = sp.getInt('$_contentHash/flashIndex') ?? 0;
+    _deepIndex = sp.getInt('$_contentHash/deepIndex') ?? 0;
     _deepDone = sp.getBool('$_contentHash/deepDone') ?? false;
     _quizScore = sp.getInt('$_contentHash/quizScore') ?? 0;
   }
@@ -217,15 +222,12 @@ class ContentProvider extends ChangeNotifier {
     }
 
     // ---- Deep Prompts normalization ----
-    final rawDeep = data['deep_prompts'] ?? data['deep'] ?? data['deep_understanding'] ?? data['reflective'] ?? [];
-    _deepPrompts = [];
-    if (rawDeep is List) {
-      _deepPrompts = rawDeep
-          .whereType<Map>()
-          .map((m) => DeepPrompt.fromMap(Map<String, dynamic>.from(m)))
-          .where((p) => p.prompt.isNotEmpty)
-          .toList();
-    }
+    final rawDeep =
+        (data['deep_prompts'] ?? data['deep']) as List? ?? const [];
+    _deepPrompts = rawDeep
+        .map((e) => DeepPrompt.fromMap(e as Map<String, dynamic>))
+        .where((p) => p.prompt.isNotEmpty)
+        .toList();
 
     if (kDebugMode) {
       debugPrint('[ContentProvider] keys: ${data.keys.toList()}');
@@ -330,7 +332,8 @@ class ContentProvider extends ChangeNotifier {
               ? _summary!
               : _flashcards.map((f) => f.term).join('|');
       _contentHash = baseForHash.isNotEmpty ? _hash(baseForHash) : '';
-
+      await _loadProgress();
+      await fetchStudyMode(textOverride: text);
       await _saveProgress();
       _canContinue = true;
       return true;
@@ -341,6 +344,47 @@ class ContentProvider extends ChangeNotifier {
     } finally {
       _isAnalyzing = false;
       notifyListeners();
+    }
+  }
+  
+  Future<void> fetchStudyMode({String? textOverride}) async {
+    final text = (textOverride ?? _rawText ?? '').trim();
+    if (text.isEmpty) return;
+
+    try {
+      final url = Uri.parse('http://10.0.2.2:8000/study-mode');
+      final resp = await http.post(url,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'text': text}));
+      if (resp.statusCode != 200) return;
+      final Map<String, dynamic> data = jsonDecode(resp.body);
+
+      // Parse deep prompts
+      final rawDeep =
+          (data['deep_prompts'] ?? data['deep']) as List? ?? const [];
+      _deepPrompts = rawDeep
+          .map((e) => DeepPrompt.fromMap(e as Map<String, dynamic>))
+          .where((p) => p.prompt.isNotEmpty)
+          .toList();
+
+      // Parse concept map if provided
+      final cmap = data['concept_map'] ?? data['conceptMap'];
+      _conceptGroups.clear();
+      if (cmap is Map && cmap['groups'] is List) {
+        _conceptGroups = (cmap['groups'] as List)
+            .whereType<Map>()
+            .map((m) => ConceptGroup.fromMap(Map<String, dynamic>.from(m)))
+            .where((g) => g.topics.isNotEmpty)
+            .toList();
+      }
+
+      // Clamp persisted index to available prompts
+      _deepIndex = _deepIndex.clamp(
+          0, _deepPrompts.isEmpty ? 0 : _deepPrompts.length - 1);
+
+      notifyListeners();
+    } catch (_) {
+      // Ignore errors; deep prompts are optional
     }
   }
   // Legacy helpers used by older flows.
@@ -356,6 +400,13 @@ class ContentProvider extends ChangeNotifier {
   // --- Progress mutations ---
   void setFlashIndex(int idx) {
     _flashIndex = idx.clamp(0, _flashcards.isEmpty ? 0 : _flashcards.length - 1);
+    _saveProgress();
+    notifyListeners();
+  }
+
+  void setDeepIndex(int idx) {
+    _deepIndex =
+        idx.clamp(0, _deepPrompts.isEmpty ? 0 : _deepPrompts.length - 1);
     _saveProgress();
     notifyListeners();
   }
@@ -388,6 +439,7 @@ class ContentProvider extends ChangeNotifier {
     _conceptTopics.clear();
     _quizzes.clear();
     _flashIndex = 0;
+    _deepIndex = 0;
     _deepDone = false;
     _quizScore = 0;
     _contentHash = '';

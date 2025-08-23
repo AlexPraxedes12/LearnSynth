@@ -74,6 +74,7 @@ models_module.ExportInput = object
 utils_module = types.ModuleType("app.utils")
 llm_module = types.ModuleType("app.utils.llm")
 llm_module.ask_llm = lambda prompt: ""
+llm_module.make_deep_prompts = lambda text: []
 utils_module.llm = llm_module
 
 sys.modules["app"] = app_module

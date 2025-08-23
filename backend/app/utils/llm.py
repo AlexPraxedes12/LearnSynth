@@ -1,4 +1,4 @@
-import os, time, random
+import os, time, random, json
 from pathlib import Path
 from dotenv import load_dotenv
 import logging
@@ -178,3 +178,49 @@ def ask_llm(prompt: str) -> str:
                 break
 
     raise HTTPException(status_code=503, detail=f"LLM unavailable: {last_error}")
+
+
+def make_deep_prompts(text: str) -> list[dict]:
+    """Generate reflective prompts for the provided text using the active LLM.
+
+    The model is instructed to respond **only** with a JSON array of objects
+    having the shape ``{"prompt": string, "hint": string?}``.  Any parse
+    failure results in an empty list so callers can safely ignore errors.
+
+    Notes:
+        This helper intentionally truncates input to keep token counts small
+        and responses fast/deterministic.
+    """
+
+    snippet = truncate_text_to_tokens(text, 800)
+    prompt = (
+        "You are an expert tutor. Craft 5-8 reflective prompts to deepen "
+        "understanding of the following material. Respond ONLY with a JSON "
+        "array of objects where each object has 'prompt' and optional 'hint' "
+        "fields.\n\n" + snippet
+    )
+
+    try:
+        raw = ask_llm(prompt)
+        data = json.loads(raw)
+        if isinstance(data, dict):
+            data = data.get("deep_prompts") or data.get("prompts") or []
+        if not isinstance(data, list):
+            return []
+        results: list[dict] = []
+        for item in data:
+            if isinstance(item, dict):
+                p = (item.get("prompt") or item.get("text") or "").strip()
+                if not p:
+                    continue
+                obj = {"prompt": p}
+                h = (item.get("hint") or item.get("explanation") or "").strip()
+                if h:
+                    obj["hint"] = h
+                results.append(obj)
+            elif isinstance(item, str) and item.strip():
+                results.append({"prompt": item.strip()})
+        return results
+    except Exception as exc:  # pragma: no cover - parsing is best effort
+        logger.warning("Failed to parse deep prompts: %s", exc)
+        return []
