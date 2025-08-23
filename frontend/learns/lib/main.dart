@@ -53,7 +53,7 @@ class StudyApp extends StatelessWidget {
           final text = ModalRoute.of(context)?.settings.arguments as String?;
           return LoadingScreen();
         },
-        Routes.analysis: (_) => const AnalysisScreen(),
+        AppRoutes.studyPack: (_) => const AnalysisScreen(),
         Routes.methodSelection: (_) => const MethodSelectionScreen(),
         Routes.deepUnderstanding: (_) => const DeepUnderstandingScreen(),
         '/deep': (_) => const DeepUnderstandingScreen(),

@@ -38,9 +38,11 @@ class ContentProvider extends ChangeNotifier {
   String? _content; // cleaned text
   String? _rawText; // raw transcript text
 
-  bool _isAnalyzing = false;
-  bool _canContinue = false;
-  String? _lastError;
+  bool isAnalyzing = false;
+  bool canContinue = false;
+  String? lastError;
+
+  Future<bool>? _inflight;
 
   // --- Content ---
   String? _summary;
@@ -58,7 +60,7 @@ class ContentProvider extends ChangeNotifier {
   // --- Public getters ---
   String? get content => _content;
   String? get rawText => _rawText;
-  String? get summary => _summary;
+  String? get summary => _summary?.isNotEmpty == true ? _summary : null;
   List<Flashcard> get flashcards => _flashcards;
   List<String> get conceptTopics => _conceptTopics;
   List<String> get deepPrompts => _deepPrompts;
@@ -68,10 +70,6 @@ class ContentProvider extends ChangeNotifier {
   bool get deepDone => _deepDone;
   int get quizScore => _quizScore;
   String get contentHash => _contentHash;
-
-  bool get isAnalyzing => _isAnalyzing;
-  bool get canContinue => _canContinue;
-  String? get lastError => _lastError;
 
   bool get hasAnyContent =>
       (_summary?.isNotEmpty ?? false) ||
@@ -91,9 +89,9 @@ class ContentProvider extends ChangeNotifier {
   }
 
   void setTranscript(String text) {
-    _rawText = text;
-    _canContinue = false;
-    _lastError = null;
+    _rawText = text.trim();
+    lastError = null;
+    canContinue = false;
     notifyListeners();
   }
 
@@ -120,31 +118,6 @@ class ContentProvider extends ChangeNotifier {
     _quizScore = sp.getInt('$_contentHash/quizScore') ?? 0;
   }
 
-  // Normalize various backend shapes to our typed structures.
-  Future<void> setAnalysis(Map<String, dynamic> data) async {
-    try {
-      _summary = (data['summary'] ?? '').toString().trim();
-      _flashcards = _coerceFlashcards(data['flashcards'] ?? data['cards']);
-      _quizzes = _coerceQuiz(data['quizzes'] ?? data['quiz'] ?? data['questions']);
-      _conceptTopics = _coerceTopics(
-          data['concept_map'] ?? data['conceptMap'] ?? data['topics']);
-      _deepPrompts =
-          (data['deep_prompts'] ?? data['deep'] ?? [])
-              .map((e) => e.toString())
-              .toList();
-
-      final baseForHash = _summary?.isNotEmpty == true
-          ? _summary!
-          : _flashcards.map((f) => f.term).join('|');
-      _contentHash = baseForHash.isNotEmpty ? _hash(baseForHash) : '';
-
-      await _saveProgress();
-      notifyListeners();
-    } catch (e, st) {
-      rethrow;
-    }
-  }
-
   List<Flashcard> _coerceFlashcards(dynamic raw) {
     final list = (raw as List? ?? []);
     return list
@@ -168,52 +141,90 @@ class ContentProvider extends ChangeNotifier {
     return [];
   }
 
-  Future<bool> runAnalysis() async {
-    if (_isAnalyzing) return false;
+  Future<bool> runAnalysis() {
+    _inflight ??=
+        _runAnalysisInternal().whenComplete(() => _inflight = null);
+    return _inflight!;
+  }
 
-    final String input = (_rawText?.trim().isNotEmpty == true)
+  Future<bool> _runAnalysisInternal() async {
+    if (isAnalyzing) return false; // extra guard
+
+    print(
+        '[ContentProvider] runAnalysis start (has raw: ${_rawText?.isNotEmpty == true}, has content: ${_content?.isNotEmpty == true})');
+
+    final text = (_rawText?.trim().isNotEmpty == true)
         ? _rawText!.trim()
-        : (_content?.trim() ?? '');
+        : (_content?.trim().isNotEmpty == true ? _content!.trim() : '');
 
-    if (input.isEmpty) {
-      _lastError = 'Nothing to analyze.';
+    if (text.isEmpty) {
+      lastError = 'Nothing to analyze.';
       notifyListeners();
+      print(
+          '[ContentProvider] runAnalysis done -> canContinue=$canContinue, err=$lastError');
       return false;
     }
 
-    _isAnalyzing = true;
-    _lastError = null;
-    _canContinue = false;
+    isAnalyzing = true;
+    lastError = null;
     notifyListeners();
 
     try {
-      final uri = Uri.parse('http://10.0.2.2:8000/analyze');
-      final resp = await http.post(
-        uri,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'text': input}),
-      );
+      final url = Uri.parse('http://10.0.2.2:8000/analyze');
+      final resp = await http
+          .post(
+            url,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'text': text}),
+          )
+          .timeout(const Duration(seconds: 60));
 
-      if (resp.statusCode == 200) {
-        final Map<String, dynamic> data =
-            jsonDecode(resp.body) as Map<String, dynamic>;
-        await setAnalysis(data);
-        _canContinue = true;
-        _lastError = null;
+      if (resp.statusCode != 200) {
+        lastError = 'Analyze failed: ${resp.statusCode}';
+        canContinue = false;
         notifyListeners();
-        return true;
+        return false;
       }
 
-      _lastError = 'Analyze failed: ${resp.statusCode}';
+      final Map<String, dynamic> data = jsonDecode(resp.body);
+
+      String _toStr(dynamic v) => (v ?? '').toString().trim();
+      List<String> _toStrList(dynamic v) =>
+          (v as List? ?? const [])
+              .map((e) => e?.toString() ?? '')
+              .where((e) => e.isNotEmpty)
+              .toList();
+
+      _summary = _toStr(data['summary']);
+      _flashcards =
+          _coerceFlashcards(data['flashcards'] ?? data['cards']);
+      _conceptTopics =
+          _toStrList(data['topics'] ?? data['concepts']);
+      _deepPrompts =
+          _toStrList(data['deep_prompts'] ?? data['deep']);
+      _quizzes = _coerceQuiz(data['quiz'] ?? data['quizzes']);
+
+      final baseForHash = _summary?.isNotEmpty == true
+          ? _summary!
+          : _flashcards.map((f) => f.term).join('|');
+      _contentHash = baseForHash.isNotEmpty ? _hash(baseForHash) : '';
+
+      await _saveProgress();
+
+      canContinue = true;
+      lastError = null;
       notifyListeners();
-      return false;
+      return true;
     } catch (e) {
-      _lastError = 'Analyze failed: $e';
+      lastError = 'Analyze error: $e';
+      canContinue = false;
       notifyListeners();
       return false;
     } finally {
-      _isAnalyzing = false;
+      isAnalyzing = false;
       notifyListeners();
+      print(
+          '[ContentProvider] runAnalysis done -> canContinue=$canContinue, err=$lastError');
     }
   }
 
@@ -247,8 +258,8 @@ class ContentProvider extends ChangeNotifier {
     _deepDone = false;
     _quizScore = 0;
     _contentHash = '';
-    _canContinue = false;
-    _lastError = null;
+    canContinue = false;
+    lastError = null;
     notifyListeners();
   }
 }

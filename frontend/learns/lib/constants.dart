@@ -19,3 +19,7 @@ class Routes {
   static const String videoPicker = '/video-picker';
   static const String library = '/library';
 }
+
+class AppRoutes {
+  static const String studyPack = '/studyPack';
+}
