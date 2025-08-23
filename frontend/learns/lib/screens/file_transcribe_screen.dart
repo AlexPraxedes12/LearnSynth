@@ -9,6 +9,7 @@ import '../constants.dart';
 import '../content_provider.dart';
 import '../services/transcription_service.dart';
 import '../widgets/primary_button.dart';
+import '../widgets/wide_button.dart';
 
 class FileTranscribeScreen extends StatefulWidget {
   final String appBarTitle;
@@ -74,12 +75,42 @@ class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
     setState(() {});
   }
 
+  Future<void> _pick() async {
+    final x = await openFile(acceptedTypeGroups: [widget.typeGroup]);
+    if (x == null) return;
+    final f = File(x.path);
+    setState(() {
+      _picked = f;
+      _error = null;
+      _busy = true;
+    });
+    final ok = await context.read<ContentProvider>().transcribeAndAnalyze(f);
+    if (!mounted) return;
+    setState(() {
+      _busy = false;
+    });
+    if (!ok) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            context.read<ContentProvider>().lastError ?? 'Analysis failed',
+          ),
+        ),
+      );
+    }
+  }
+
+  void _goToStudyPack(BuildContext context) {
+    Navigator.pushNamed(context, AppRoutes.studyPack);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<ContentProvider>();
-    final transcriptExists = provider.rawText?.isNotEmpty ?? false;
-    final isBusy = provider.isAnalyzing || _busy;
-    final canContinue = provider.canContinue && _picked != null;
+    final p = context.watch<ContentProvider>();
+    final hasPick = _picked != null;
+    final transcriptExists = p.rawText?.isNotEmpty ?? false;
+    final isBusy = p.isAnalyzing || _busy;
+    final canContinue = p.canContinue && _picked != null;
 
     return Scaffold(
       appBar: AppBar(title: Text(widget.appBarTitle)),
@@ -103,19 +134,32 @@ class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
               Text(_error!, style: const TextStyle(color: Colors.red)),
             const Spacer(),
             if (_isAudio)
-              PrimaryButton(
-                label: isBusy ? 'Analyzing…' : 'Continue',
-                onPressed: (!isBusy && canContinue)
-                    ? () => Navigator.pushNamed(context, AppRoutes.studyPack)
-                    : null,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Always show Select Audio
+                  WideButton(
+                    label: 'Select Audio',
+                    onPressed: _busy ? null : _pick,
+                  ),
+                  const SizedBox(height: 12),
+                  // Only render Continue AFTER a file is picked
+                  if (hasPick)
+                    WideButton(
+                      label: p.isAnalyzing ? 'Analyzing…' : 'Continue',
+                      onPressed: (!p.isAnalyzing && p.canContinue)
+                          ? () => _goToStudyPack(context)
+                          : null,
+                    ),
+                ],
               )
             else ...[
               PrimaryButton(
                 label: transcriptExists
-                    ? (provider.isAnalyzing ? 'Analyzing…' : 'Continue')
+                    ? (p.isAnalyzing ? 'Analyzing…' : 'Continue')
                     : (_busy ? 'Transcribing…' : 'Transcribe'),
                 onPressed: transcriptExists
-                    ? (provider.isAnalyzing
+                    ? (p.isAnalyzing
                           ? null
                           : () async {
                               final ok = await context
@@ -137,7 +181,7 @@ class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
                             })
                     : (!_busy ? _run : null),
               ),
-              if (provider.isAnalyzing)
+              if (p.isAnalyzing)
                 const Padding(
                   padding: EdgeInsets.only(top: 12),
                   child: LinearProgressIndicator(minHeight: 2),
