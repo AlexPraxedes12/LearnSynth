@@ -21,6 +21,22 @@ class Flashcard {
       );
 }
 
+class DeepPrompt {
+  final String prompt;
+  final String? hint;
+  DeepPrompt({required this.prompt, this.hint});
+  factory DeepPrompt.fromMap(Map<String, dynamic> m) => DeepPrompt(
+        prompt: (m['prompt'] ?? m['question'] ?? m['text'] ?? '').toString(),
+        hint: (m['hint'] ?? m['notes'])?.toString(),
+      );
+}
+
+class ConceptGroup {
+  final String title;
+  final List<String> topics;
+  ConceptGroup({required this.title, required this.topics});
+}
+
 class QuizItem {
   final String question;
   final List<String> options;
@@ -59,9 +75,9 @@ class ContentProvider extends ChangeNotifier {
   // --- Content ---
   String? _summary;
   List<Flashcard> _flashcards = [];
-  final List<String> _deepPrompts = [];
-  final List<String> _conceptTopics = [];
-  final Map<String, List<String>> _conceptGroups = {};
+  List<DeepPrompt> _deepPrompts = [];
+  List<ConceptGroup> _conceptGroups = [];
+  List<String> _conceptTopics = [];
   List<QuizItem> _quizzes = [];
 
   // --- Progress (lightweight) ---
@@ -75,12 +91,11 @@ class ContentProvider extends ChangeNotifier {
   String? get rawText => _rawText;
   String? get summary => _summary?.isNotEmpty == true ? _summary : null;
   List<Flashcard> get flashcards => _flashcards;
-  List<String> get deepPrompts => List.unmodifiable(_deepPrompts);
-  bool get hasDeep => _deepPrompts.isNotEmpty;
+  List<DeepPrompt> get deepPrompts => _deepPrompts;
+  List<ConceptGroup> get conceptGroups => _conceptGroups;
+  List<String> get conceptTopics => _conceptTopics;
 
-  List<String> get conceptTopics => List.unmodifiable(_conceptTopics);
-  Map<String, List<String>> get conceptGroups =>
-      Map.unmodifiable(_conceptGroups);
+  bool get hasDeep => _deepPrompts.isNotEmpty;
   bool get hasConcepts =>
       _conceptGroups.isNotEmpty || _conceptTopics.isNotEmpty;
 
@@ -158,17 +173,6 @@ class ContentProvider extends ChangeNotifier {
         .toList();
   }
 
-  List<String> _toStringList(dynamic v) {
-    if (v == null) return const [];
-    if (v is List) {
-      return v
-          .map((e) => e?.toString() ?? '')
-          .where((s) => s.isNotEmpty)
-          .toList();
-    }
-    return [v.toString()];
-  }
-
   void setAnalysis(Map<String, dynamic> data) {
     String _toStr(dynamic v) => (v ?? '').toString().trim();
 
@@ -176,28 +180,47 @@ class ContentProvider extends ChangeNotifier {
     _flashcards = _coerceFlashcards(data['flashcards'] ?? data['cards']);
     _quizzes = _coerceQuiz(data['quiz'] ?? data['quizzes']);
 
-    final deep = data['deep_prompts'] ??
+    // ---- Deep Understanding (tolerant) ----
+    final rawDeep = data['deep'] ??
+        data['deep_prompts'] ??
         data['deepPrompts'] ??
-        data['deep_understanding'] ??
-        data['reflective_prompts'];
-    _deepPrompts
-      ..clear()
-      ..addAll(_toStringList(deep));
+        data['reflect'] ??
+        data['prompts'] ??
+        [];
 
-    final concept = data['concept_topics'] ??
-        data['conceptMap'] ??
-        data['concept_map'] ??
-        data['contextual_association'] ??
-        (data['concept']?['topics']);
-    _conceptGroups.clear();
-    _conceptTopics.clear();
-    if (concept is Map) {
-      final m = Map<String, dynamic>.from(concept as Map);
-      m.forEach((key, value) {
-        _conceptGroups[key.toString()] = _toStringList(value);
-      });
+    if (rawDeep is List) {
+      _deepPrompts = rawDeep
+          .whereType<Map>()
+          .map((m) => DeepPrompt.fromMap(Map<String, dynamic>.from(m)))
+          .toList();
     } else {
-      _conceptTopics.addAll(_toStringList(concept));
+      _deepPrompts = [];
+    }
+
+    // ---- Concepts / Concept Map (tolerant) ----
+    final rawConcepts = data['concepts'] ??
+        data['concept_map'] ??
+        data['conceptMap'] ??
+        data['concept'] ??
+        data['conceptTopics'] ??
+        [];
+
+    _conceptGroups = [];
+    _conceptTopics = [];
+
+    if (rawConcepts is Map) {
+      final groups = <ConceptGroup>[];
+      rawConcepts.forEach((k, v) {
+        final list =
+            (v is List) ? v.map((e) => e.toString()).toList() : <String>[];
+        groups.add(ConceptGroup(title: k.toString(), topics: list));
+      });
+      _conceptGroups = groups;
+      _conceptTopics = groups.expand((g) => g.topics).toSet().toList();
+    } else if (rawConcepts is List) {
+      // Flat list of topics
+      _conceptGroups = [];
+      _conceptTopics = rawConcepts.map((e) => e.toString()).toList();
     }
 
     notifyListeners();
