@@ -8,49 +8,42 @@ class ContextualAssociationScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final p = context.watch<ContentProvider>();
-    if (p.conceptGroups.isNotEmpty) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Concept Map')),
-        body: ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: p.conceptGroups.length,
-          itemBuilder: (_, i) {
-            final g = p.conceptGroups[i];
-            return Card(
-              margin: const EdgeInsets.only(bottom: 12),
-              child: ExpansionTile(
-                title: Text(g.title),
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                    child: Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children:
-                          g.topics.map((t) => Chip(label: Text(t))).toList(),
-                    ),
-                  ),
-                ],
+    final provider = context.watch<ContentProvider>();
+    final groups = provider.conceptGroups;
+
+    Widget buildChips(List<String> items) => Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: items.map((t) => Chip(label: Text(t))).toList(),
+        );
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Concept Map')),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: groups.isNotEmpty
+            ? ListView.builder(
+                itemCount: groups.length,
+                itemBuilder: (context, i) {
+                  final g = groups[i];
+                  return ExpansionTile(
+                    title: Text(g.title),
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        child: buildChips(g.topics),
+                      )
+                    ],
+                  );
+                },
+              )
+            : Center(
+                child: buildChips(
+                  provider.conceptGroups.expand((g) => g.topics).toList(),
+                ),
               ),
-            );
-          },
-        ),
-      );
-    } else {
-      // Fallback: flat topics
-      return Scaffold(
-        appBar: AppBar(title: const Text('Concept Map')),
-        body: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children:
-                p.conceptTopics.map((t) => Chip(label: Text(t))).toList(),
-          ),
-        ),
-      );
-    }
+      ),
+    );
   }
 }

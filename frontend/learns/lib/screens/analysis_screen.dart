@@ -29,14 +29,18 @@ class AnalysisScreen extends StatelessWidget {
             const SizedBox(height: 12),
             WideButton(
               label: 'Deep Understanding',
-              enabled: p.deepPrompts.isNotEmpty,
-              onPressed: p.deepPrompts.isEmpty ? null : () => Navigator.pushNamed(context, '/deep'),
+              enabled: p.canDeepUnderstanding,
+              onPressed: p.canDeepUnderstanding
+                  ? () => Navigator.pushNamed(context, '/deep')
+                  : null,
             ),
             const SizedBox(height: 12),
             WideButton(
               label: 'Contextual Association',
-              enabled: p.conceptTopics.isNotEmpty,
-              onPressed: p.conceptTopics.isNotEmpty ? () => Navigator.pushNamed(context, '/concept') : null,
+              enabled: p.canContextualAssociation,
+              onPressed: p.canContextualAssociation
+                  ? () => Navigator.pushNamed(context, '/concept')
+                  : null,
             ),
             const SizedBox(height: 12),
             WideButton(

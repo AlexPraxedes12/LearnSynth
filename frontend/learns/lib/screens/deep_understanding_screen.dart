@@ -1,90 +1,83 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+import '../constants.dart';
 import '../content_provider.dart';
+import '../widgets/wide_button.dart';
 
 /// Shows one reflective prompt at a time to encourage deeper thinking.
-/// Answers are stored locally and can be persisted later if needed.
-class DeepUnderstandingScreen extends StatefulWidget {
+class DeepUnderstandingScreen extends StatelessWidget {
   const DeepUnderstandingScreen({super.key});
 
   @override
-  State<DeepUnderstandingScreen> createState() => _DeepUnderstandingScreenState();
-}
-
-class _DeepUnderstandingScreenState extends State<DeepUnderstandingScreen> {
-  int _i = 0;
-  final _controller = TextEditingController();
-  // Optional: store answers locally; persist later if desired
-  final Map<int, String> _answers = {};
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final p = context.watch<ContentProvider>();
-    final prompts = p.deepPrompts;
+    final provider = context.watch<ContentProvider>();
+    final prompts = provider.deepPrompts;
+
     if (prompts.isEmpty) {
       return Scaffold(
         appBar: AppBar(title: const Text('Deep Understanding')),
-        body: const Center(child: Text('No prompts available.')),
+        body: const Center(child: Text('No deep prompts available.')),
       );
     }
 
-    _controller.value = TextEditingValue(text: _answers[_i] ?? '');
-
+    int index = 0;
     return Scaffold(
       appBar: AppBar(title: const Text('Deep Understanding')),
       body: Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Prompt ${_i + 1} of ${prompts.length}',
-                style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            Text(prompts[_i].prompt,
-                style: Theme.of(context).textTheme.bodyLarge),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _controller,
-              maxLines: 6,
-              decoration: const InputDecoration(
-                hintText: 'Write your reflection here…',
-                border: OutlineInputBorder(),
-              ),
-              onChanged: (v) => _answers[_i] = v,
-            ),
-            const Spacer(),
-            Row(
+        child: StatefulBuilder(
+          builder: (context, setState) {
+            final p = prompts[index];
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                TextButton(
-                  onPressed: _i == 0 ? null : () => setState(() => _i--),
-                  child: const Text('Prev'),
-                ),
-                const Spacer(),
-                if (_i < prompts.length - 1)
-                  ElevatedButton(
-                    onPressed: () => setState(() => _i++),
-                    child: const Text('Next'),
-                  )
-                else
-                  ElevatedButton(
-                    onPressed: () {
-                      // Optional: save answers somewhere; for now just mark done.
-                      context.read<ContentProvider>().markDeepDone();
-                      Navigator.pop(context);
-                    },
-                    child: const Text('Done'),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(p.prompt,
+                            style: Theme.of(context).textTheme.titleMedium),
+                        if (p.hint.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          Text(p.hint,
+                              style: Theme.of(context).textTheme.bodySmall),
+                        ],
+                      ],
+                    ),
                   ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    WideButton(
+                      label: 'Prev',
+                      onPressed:
+                          index > 0 ? () => setState(() => index--) : null,
+                    ),
+                    WideButton(
+                      label: 'Next',
+                      onPressed: index < prompts.length - 1
+                          ? () => setState(() => index++)
+                          : null,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                WideButton(
+                  label: 'Complete Session',
+                  onPressed: () =>
+                      Navigator.pushNamed(context, Routes.progress),
+                ),
               ],
-            ),
-          ],
+            );
+          },
         ),
       ),
     );
   }
 }
+
