@@ -32,7 +32,7 @@ class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
 
   final _svc = TranscriptionService();
 
-  bool get _isAudio => widget.typeGroup.label.toLowerCase() == 'audio';
+  bool get _isAudio => widget.typeGroup.label!.toLowerCase() == 'audio';
 
   @override
   void initState() {
@@ -69,9 +69,7 @@ class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
     if (!mounted) return;
     if (!ok) {
       final msg = provider.lastError ?? 'Analysis failed';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(msg)),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
     }
     setState(() {});
   }
@@ -118,23 +116,25 @@ class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
                     : (_busy ? 'Transcribing…' : 'Transcribe'),
                 onPressed: transcriptExists
                     ? (provider.isAnalyzing
-                        ? null
-                        : () async {
-                            final ok =
-                                await context.read<ContentProvider>().runAnalysis();
-                            if (!context.mounted) return;
-                            if (ok) {
-                              Navigator.of(context)
-                                  .pushNamed(AppRoutes.studyPack);
-                            } else {
-                              final msg =
-                                  context.read<ContentProvider>().lastError ??
-                                      'Unable to analyze';
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(msg)),
-                              );
-                            }
-                          })
+                          ? null
+                          : () async {
+                              final ok = await context
+                                  .read<ContentProvider>()
+                                  .runAnalysis();
+                              if (!context.mounted) return;
+                              if (ok) {
+                                Navigator.of(
+                                  context,
+                                ).pushNamed(AppRoutes.studyPack);
+                              } else {
+                                final msg =
+                                    context.read<ContentProvider>().lastError ??
+                                    'Unable to analyze';
+                                ScaffoldMessenger.of(
+                                  context,
+                                ).showSnackBar(SnackBar(content: Text(msg)));
+                              }
+                            })
                     : (!_busy ? _run : null),
               ),
               if (provider.isAnalyzing)
@@ -154,4 +154,3 @@ class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
     );
   }
 }
-
