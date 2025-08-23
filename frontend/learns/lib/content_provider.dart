@@ -9,6 +9,25 @@ import 'package:http/http.dart' as http;
 
 import 'services/transcription_service.dart';
 
+class DeepPrompt {
+  final String prompt;
+  final String hint;
+  DeepPrompt({required this.prompt, this.hint = ''});
+  factory DeepPrompt.fromMap(Map<String, dynamic> m) {
+    final p =
+        (m['prompt'] ?? m['text'] ?? m['question'] ?? '').toString().trim();
+    final h =
+        (m['hint'] ?? m['explanation'] ?? '').toString().trim();
+    return DeepPrompt(prompt: p, hint: h);
+  }
+}
+
+class ConceptGroup {
+  final String title;
+  final List<String> topics;
+  ConceptGroup({required this.title, required this.topics});
+}
+
 enum StudyMode { memorization, deep_understanding, contextual_association, interactive_evaluation }
 
 class Flashcard {
@@ -19,22 +38,6 @@ class Flashcard {
         term: (m['term'] ?? '').toString(),
         definition: (m['definition'] ?? '').toString(),
       );
-}
-
-class DeepPrompt {
-  final String prompt;
-  final String? hint;
-  DeepPrompt({required this.prompt, this.hint});
-  factory DeepPrompt.fromMap(Map<String, dynamic> m) => DeepPrompt(
-        prompt: (m['prompt'] ?? m['question'] ?? m['text'] ?? '').toString(),
-        hint: (m['hint'] ?? m['notes'])?.toString(),
-      );
-}
-
-class ConceptGroup {
-  final String title;
-  final List<String> topics;
-  ConceptGroup({required this.title, required this.topics});
 }
 
 class QuizItem {
@@ -77,7 +80,6 @@ class ContentProvider extends ChangeNotifier {
   List<Flashcard> _flashcards = [];
   List<DeepPrompt> _deepPrompts = [];
   List<ConceptGroup> _conceptGroups = [];
-  List<String> _conceptTopics = [];
   List<QuizItem> _quizzes = [];
 
   // --- Progress (lightweight) ---
@@ -93,11 +95,12 @@ class ContentProvider extends ChangeNotifier {
   List<Flashcard> get flashcards => _flashcards;
   List<DeepPrompt> get deepPrompts => _deepPrompts;
   List<ConceptGroup> get conceptGroups => _conceptGroups;
-  List<String> get conceptTopics => _conceptTopics;
 
-  bool get hasDeep => _deepPrompts.isNotEmpty;
-  bool get hasConcepts =>
-      _conceptGroups.isNotEmpty || _conceptTopics.isNotEmpty;
+  // Availability flags used by CTAs
+  bool get hasDeep => _deepPrompts.isNotEmpty; // legacy
+  bool get hasConcept => _conceptGroups.isNotEmpty; // legacy
+  bool get canDeepUnderstanding => hasDeep; // alias
+  bool get canContextualAssociation => hasConcept; // alias
 
   List<QuizItem> get quizzes => _quizzes;
 
@@ -112,7 +115,6 @@ class ContentProvider extends ChangeNotifier {
       (summary?.isNotEmpty ?? false) ||
       _flashcards.isNotEmpty ||
       _deepPrompts.isNotEmpty ||
-      _conceptTopics.isNotEmpty ||
       _conceptGroups.isNotEmpty ||
       _quizzes.isNotEmpty;
 
@@ -173,6 +175,69 @@ class ContentProvider extends ChangeNotifier {
         .toList();
   }
 
+  List<DeepPrompt> _coerceDeep(dynamic raw) {
+    final out = <DeepPrompt>[];
+    if (raw is List) {
+      for (final e in raw) {
+        if (e is Map) {
+          final dp = DeepPrompt.fromMap(e.cast<String, dynamic>());
+          if (dp.prompt.isNotEmpty) out.add(dp);
+        } else if (e != null) {
+          final p = e.toString().trim();
+          if (p.isNotEmpty) out.add(DeepPrompt(prompt: p));
+        }
+      }
+    }
+    return out;
+  }
+
+  List<ConceptGroup> _coerceConceptGroups(dynamic raw) {
+    final groups = <ConceptGroup>[];
+
+    if (raw is Map) {
+      raw.forEach((k, v) {
+        final items = (v as List? ?? const [])
+            .map((e) => e.toString().trim())
+            .where((s) => s.isNotEmpty)
+            .toList();
+        if (items.isNotEmpty) {
+          groups.add(ConceptGroup(title: k.toString(), topics: items));
+        }
+      });
+      return groups;
+    }
+
+    if (raw is List) {
+      final hasMaps = raw.any((e) => e is Map);
+      if (hasMaps) {
+        for (final e in raw) {
+          if (e is Map) {
+            final m = e.cast<String, dynamic>();
+            final title =
+                (m['group'] ?? m['title'] ?? m['name'] ?? '').toString().trim();
+            final items = (m['items'] ?? m['topics'] ?? m['concepts'] ?? const [])
+                .map((x) => x.toString().trim())
+                .where((s) => s.isNotEmpty)
+                .toList();
+            if (title.isNotEmpty && items.isNotEmpty) {
+              groups.add(ConceptGroup(title: title, topics: items));
+            }
+          }
+        }
+      } else {
+        final items = raw
+            .map((e) => e.toString().trim())
+            .where((s) => s.isNotEmpty)
+            .toList();
+        if (items.isNotEmpty) {
+          groups.add(ConceptGroup(title: 'Topics', topics: items));
+        }
+      }
+    }
+
+    return groups;
+  }
+
   void setAnalysis(Map<String, dynamic> data) {
     String _toStr(dynamic v) => (v ?? '').toString().trim();
 
@@ -180,48 +245,10 @@ class ContentProvider extends ChangeNotifier {
     _flashcards = _coerceFlashcards(data['flashcards'] ?? data['cards']);
     _quizzes = _coerceQuiz(data['quiz'] ?? data['quizzes']);
 
-    // ---- Deep Understanding (tolerant) ----
-    final rawDeep = data['deep'] ??
-        data['deep_prompts'] ??
-        data['deepPrompts'] ??
-        data['reflect'] ??
-        data['prompts'] ??
-        [];
-
-    if (rawDeep is List) {
-      _deepPrompts = rawDeep
-          .whereType<Map>()
-          .map((m) => DeepPrompt.fromMap(Map<String, dynamic>.from(m)))
-          .toList();
-    } else {
-      _deepPrompts = [];
-    }
-
-    // ---- Concepts / Concept Map (tolerant) ----
-    final rawConcepts = data['concepts'] ??
-        data['concept_map'] ??
-        data['conceptMap'] ??
-        data['concept'] ??
-        data['conceptTopics'] ??
-        [];
-
-    _conceptGroups = [];
-    _conceptTopics = [];
-
-    if (rawConcepts is Map) {
-      final groups = <ConceptGroup>[];
-      rawConcepts.forEach((k, v) {
-        final list =
-            (v is List) ? v.map((e) => e.toString()).toList() : <String>[];
-        groups.add(ConceptGroup(title: k.toString(), topics: list));
-      });
-      _conceptGroups = groups;
-      _conceptTopics = groups.expand((g) => g.topics).toSet().toList();
-    } else if (rawConcepts is List) {
-      // Flat list of topics
-      _conceptGroups = [];
-      _conceptTopics = rawConcepts.map((e) => e.toString()).toList();
-    }
+    _deepPrompts =
+        _coerceDeep(data['deep_understanding'] ?? data['deep'] ?? []);
+    _conceptGroups = _coerceConceptGroups(
+        data['concept_map'] ?? data['concept'] ?? data['contextual_association'] ?? []);
 
     notifyListeners();
   }
@@ -376,7 +403,6 @@ class ContentProvider extends ChangeNotifier {
     _flashcards.clear();
     _deepPrompts.clear();
     _conceptGroups.clear();
-    _conceptTopics.clear();
     _quizzes.clear();
     _flashIndex = 0;
     _deepDone = false;
