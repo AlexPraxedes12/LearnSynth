@@ -32,12 +32,16 @@ class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
 
   final _svc = TranscriptionService();
 
-  ContentProvider get _provider => context.read<ContentProvider>();
+  bool get _isAudio => widget.typeGroup.label.toLowerCase() == 'audio';
 
   @override
   void initState() {
     super.initState();
     _picked = widget.file;
+    if (_isAudio && _picked != null) {
+      // Kick off transcription + analysis automatically
+      WidgetsBinding.instance.addPostFrameCallback((_) => _startAuto());
+    }
   }
 
   Future<void> _run() async {
@@ -59,13 +63,25 @@ class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
     }
   }
 
-  // Analysis is triggered directly from the button using [_provider].
+  Future<void> _startAuto() async {
+    final provider = context.read<ContentProvider>();
+    final ok = await provider.transcribeAndAnalyze(_picked!);
+    if (!mounted) return;
+    if (!ok) {
+      final msg = provider.lastError ?? 'Analysis failed';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg)),
+      );
+    }
+    setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<ContentProvider>();
     final transcriptExists = provider.rawText?.isNotEmpty ?? false;
-    final isBusy = provider.isAnalyzing;
+    final isBusy = provider.isAnalyzing || _busy;
+    final canContinue = provider.canContinue && _picked != null;
 
     return Scaffold(
       appBar: AppBar(title: Text(widget.appBarTitle)),
@@ -88,32 +104,46 @@ class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
             if (_error != null)
               Text(_error!, style: const TextStyle(color: Colors.red)),
             const Spacer(),
-            PrimaryButton(
-              label: transcriptExists
-                  ? (isBusy ? 'Analyzing…' : 'Continue')
-                  : (_busy ? 'Transcribing…' : 'Transcribe'),
-              onPressed: transcriptExists
-                  ? (isBusy
-                      ? null
-                      : () async {
-                          final ok =
-                              await context.read<ContentProvider>().runAnalysis();
-                          if (!context.mounted) return;
-                          if (ok) {
-                            Navigator.of(context)
-                                .pushNamed(AppRoutes.studyPack);
-                          } else {
-                            final msg =
-                                context.read<ContentProvider>().lastError ??
-                                    'Unable to analyze';
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text(msg)),
-                            );
-                          }
-                        })
-                  : (!_busy ? _run : null),
-            ),
-            if (isBusy)
+            if (_isAudio)
+              PrimaryButton(
+                label: isBusy ? 'Analyzing…' : 'Continue',
+                onPressed: (!isBusy && canContinue)
+                    ? () => Navigator.pushNamed(context, AppRoutes.studyPack)
+                    : null,
+              )
+            else ...[
+              PrimaryButton(
+                label: transcriptExists
+                    ? (provider.isAnalyzing ? 'Analyzing…' : 'Continue')
+                    : (_busy ? 'Transcribing…' : 'Transcribe'),
+                onPressed: transcriptExists
+                    ? (provider.isAnalyzing
+                        ? null
+                        : () async {
+                            final ok =
+                                await context.read<ContentProvider>().runAnalysis();
+                            if (!context.mounted) return;
+                            if (ok) {
+                              Navigator.of(context)
+                                  .pushNamed(AppRoutes.studyPack);
+                            } else {
+                              final msg =
+                                  context.read<ContentProvider>().lastError ??
+                                      'Unable to analyze';
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(msg)),
+                              );
+                            }
+                          })
+                    : (!_busy ? _run : null),
+              ),
+              if (provider.isAnalyzing)
+                const Padding(
+                  padding: EdgeInsets.only(top: 12),
+                  child: LinearProgressIndicator(minHeight: 2),
+                ),
+            ],
+            if (_isAudio && isBusy)
               const Padding(
                 padding: EdgeInsets.only(top: 12),
                 child: LinearProgressIndicator(minHeight: 2),

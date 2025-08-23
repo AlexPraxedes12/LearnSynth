@@ -1,8 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+
+import 'services/transcription_service.dart';
 
 enum StudyMode { memorization, deep_understanding, contextual_association, interactive_evaluation }
 
@@ -38,9 +42,11 @@ class ContentProvider extends ChangeNotifier {
   String? _content; // cleaned text
   String? _rawText; // raw transcript text
 
-  bool isAnalyzing = false;
-  bool canContinue = false;
-  String? lastError;
+  bool _isAnalyzing = false;
+  String? _lastError;
+
+  bool get isAnalyzing => _isAnalyzing;
+  String? get lastError => _lastError;
 
   Future<bool>? _inflight;
 
@@ -71,12 +77,16 @@ class ContentProvider extends ChangeNotifier {
   int get quizScore => _quizScore;
   String get contentHash => _contentHash;
 
-  bool get hasAnyContent =>
-      (_summary?.isNotEmpty ?? false) ||
+  bool get hasTranscript => (_rawText ?? '').trim().isNotEmpty;
+
+  bool get hasAnalysis =>
+      (summary?.isNotEmpty ?? false) ||
       _flashcards.isNotEmpty ||
-      _conceptTopics.isNotEmpty ||
       _deepPrompts.isNotEmpty ||
+      _conceptTopics.isNotEmpty ||
       _quizzes.isNotEmpty;
+
+  bool get canContinue => hasAnalysis;
 
   set content(String? v) {
     _content = v;
@@ -90,8 +100,7 @@ class ContentProvider extends ChangeNotifier {
 
   void setTranscript(String text) {
     _rawText = text.trim();
-    lastError = null;
-    canContinue = false;
+    _lastError = null;
     notifyListeners();
   }
 
@@ -141,48 +150,35 @@ class ContentProvider extends ChangeNotifier {
     return [];
   }
 
-  Future<bool> runAnalysis() {
+  Future<bool> runAnalysis({String? textOverride}) {
     _inflight ??=
-        _runAnalysisInternal().whenComplete(() => _inflight = null);
+        _runAnalysisInternal(textOverride: textOverride).whenComplete(() {
+      _inflight = null;
+    });
     return _inflight!;
   }
 
-  Future<bool> _runAnalysisInternal() async {
-    if (isAnalyzing) return false; // extra guard
-
-    print(
-        '[ContentProvider] runAnalysis start (has raw: ${_rawText?.isNotEmpty == true}, has content: ${_content?.isNotEmpty == true})');
-
-    final text = (_rawText?.trim().isNotEmpty == true)
-        ? _rawText!.trim()
-        : (_content?.trim().isNotEmpty == true ? _content!.trim() : '');
-
-    if (text.isEmpty) {
-      lastError = 'Nothing to analyze.';
-      notifyListeners();
-      print(
-          '[ContentProvider] runAnalysis done -> canContinue=$canContinue, err=$lastError');
-      return false;
-    }
-
-    isAnalyzing = true;
-    lastError = null;
+  Future<bool> _runAnalysisInternal({String? textOverride}) async {
+    _isAnalyzing = true;
+    _lastError = null;
     notifyListeners();
 
     try {
+      final text = (textOverride ?? _rawText ?? '').trim();
+      if (text.isEmpty) {
+        _lastError = 'Nothing to analyze.';
+        return false;
+      }
+
       final url = Uri.parse('http://10.0.2.2:8000/analyze');
-      final resp = await http
-          .post(
-            url,
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'text': text}),
-          )
-          .timeout(const Duration(seconds: 60));
+      final resp = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'text': text}),
+      );
 
       if (resp.statusCode != 200) {
-        lastError = 'Analyze failed: ${resp.statusCode}';
-        canContinue = false;
-        notifyListeners();
+        _lastError = 'Analyze failed: ${resp.statusCode}';
         return false;
       }
 
@@ -204,27 +200,49 @@ class ContentProvider extends ChangeNotifier {
           _toStrList(data['deep_prompts'] ?? data['deep']);
       _quizzes = _coerceQuiz(data['quiz'] ?? data['quizzes']);
 
-      final baseForHash = _summary?.isNotEmpty == true
-          ? _summary!
-          : _flashcards.map((f) => f.term).join('|');
+      final baseForHash =
+          _summary?.isNotEmpty == true
+              ? _summary!
+              : _flashcards.map((f) => f.term).join('|');
       _contentHash = baseForHash.isNotEmpty ? _hash(baseForHash) : '';
 
       await _saveProgress();
-
-      canContinue = true;
-      lastError = null;
-      notifyListeners();
       return true;
     } catch (e) {
-      lastError = 'Analyze error: $e';
-      canContinue = false;
-      notifyListeners();
+      _lastError = e.toString();
       return false;
     } finally {
-      isAnalyzing = false;
+      _isAnalyzing = false;
       notifyListeners();
-      print(
-          '[ContentProvider] runAnalysis done -> canContinue=$canContinue, err=$lastError');
+    }
+  }
+
+  final _svc = TranscriptionService();
+
+  Future<bool> transcribeAndAnalyze(File file) async {
+    if (_isAnalyzing) return false;
+
+    _isAnalyzing = true;
+    _lastError = null;
+    notifyListeners();
+
+    try {
+      final text = await _svc.sendFile(file);
+      _rawText = (text).trim();
+
+      if (_rawText!.isEmpty) {
+        _lastError = 'Empty transcription';
+        return false;
+      }
+
+      final ok = await runAnalysis(textOverride: _rawText);
+      return ok;
+    } catch (e) {
+      _lastError = e.toString();
+      return false;
+    } finally {
+      _isAnalyzing = false;
+      notifyListeners();
     }
   }
 
@@ -258,8 +276,7 @@ class ContentProvider extends ChangeNotifier {
     _deepDone = false;
     _quizScore = 0;
     _contentHash = '';
-    canContinue = false;
-    lastError = null;
+    _lastError = null;
     notifyListeners();
   }
 }
