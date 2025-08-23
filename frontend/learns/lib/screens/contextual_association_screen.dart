@@ -8,42 +8,60 @@ class ContextualAssociationScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<ContentProvider>();
-    final groups = provider.conceptGroups;
-
-    Widget buildChips(List<String> items) => Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: items.map((t) => Chip(label: Text(t))).toList(),
-        );
-
+    final p = context.watch<ContentProvider>();
+    final groups = p.conceptGroups;
+    final topics = p.flatConceptTopics;
     return Scaffold(
       appBar: AppBar(title: const Text('Concept Map')),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: groups.isNotEmpty
-            ? ListView.builder(
-                itemCount: groups.length,
-                itemBuilder: (context, i) {
-                  final g = groups[i];
-                  return ExpansionTile(
-                    title: Text(g.title),
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 8),
-                        child: buildChips(g.topics),
-                      )
-                    ],
-                  );
-                },
+            ? ListView(
+                children: groups.length == 1
+                    // Single group: render just chips without a collapsible header
+                    ? [
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 12,
+                          children:
+                              groups.first.topics.map((t) => _chip(t)).toList(),
+                        )
+                      ]
+                    // Multiple groups: ExpansionTiles
+                    : groups
+                        .map((g) => ExpansionTile(
+                              title: Text(g.title),
+                              initiallyExpanded: true,
+                              children: [
+                                Wrap(
+                                  spacing: 12,
+                                  runSpacing: 12,
+                                  children:
+                                      g.topics.map((t) => _chip(t)).toList(),
+                                ),
+                                const SizedBox(height: 8),
+                                const Divider(),
+                              ],
+                            ))
+                        .toList(),
               )
-            : Center(
-                child: buildChips(
-                  provider.conceptGroups.expand((g) => g.topics).toList(),
-                ),
-              ),
+            : topics.isNotEmpty
+                ? Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: topics.map((t) => _chip(t)).toList(),
+                  )
+                : const Center(child: Text('No concept topics available.')),
       ),
     );
   }
+}
+
+Widget _chip(String t) {
+  return ActionChip(
+    label: Text(t),
+    onPressed: () {
+      // Optional: later you can show a small dialog with a 1-line definition if backend adds it.
+    },
+  );
 }
