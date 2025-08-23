@@ -13,9 +13,17 @@ class MethodSelectionScreen extends StatefulWidget {
 }
 
 class _MethodSelectionScreenState extends State<MethodSelectionScreen> {
+  late final ContentProvider _provider;
+
+  @override
+  void initState() {
+    super.initState();
+    _provider = context.read<ContentProvider>();
+  }
+
   @override
   void dispose() {
-    context.read<ContentProvider>().resetAll();
+    _provider.resetAll();
     super.dispose();
   }
 
