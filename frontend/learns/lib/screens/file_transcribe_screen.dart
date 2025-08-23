@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
-import 'package:path/path.dart' as p;
+import 'package:path/path.dart' as pth;
 import 'package:provider/provider.dart';
 
 import '../constants.dart';
@@ -120,7 +120,7 @@ class _FileTranscribeScreenState extends State<FileTranscribeScreen> {
           children: [
             if (_picked != null) ...[
               Text(
-                p.basename(_picked!.path),
+                pth.basename(_picked!.path),
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 4),
