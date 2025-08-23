@@ -8,9 +8,9 @@ class Routes {
   static const String studyPack = '/studyPack';
   static const String analysis = studyPack;
   static const String methodSelection = '/method-selection';
-  static const String deepUnderstanding = '/deep';
+  static const String deep = '/deep';
   static const String memorization = '/memorization';
-  static const String contextualAssociation = '/concept';
+  static const String concept = '/concept';
   static const String quiz = '/quiz';
   static const String interactiveEvaluation = quiz;
   static const String progress = '/progress';
