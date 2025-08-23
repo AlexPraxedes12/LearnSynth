@@ -56,17 +56,17 @@ class _MethodSelectionScreenState extends State<MethodSelectionScreen> {
             const SizedBox(height: 12),
             WideButton(
               label: 'Deep Understanding',
-              enabled: p.hasDeepPrompts,
-              onPressed: p.hasDeepPrompts
-                  ? () => Navigator.pushNamed(context, Routes.deepUnderstanding)
+              enabled: p.hasDeep,
+              onPressed: p.hasDeep
+                  ? () => Navigator.pushNamed(context, Routes.deep)
                   : null,
             ),
             const SizedBox(height: 12),
             WideButton(
               label: 'Contextual Association',
-              enabled: p.hasConceptTopics,
-              onPressed: p.hasConceptTopics
-                  ? () => Navigator.pushNamed(context, Routes.contextualAssociation)
+              enabled: p.hasConcepts,
+              onPressed: p.hasConcepts
+                  ? () => Navigator.pushNamed(context, Routes.concept)
                   : null,
             ),
             const SizedBox(height: 12),

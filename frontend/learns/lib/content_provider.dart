@@ -61,6 +61,7 @@ class ContentProvider extends ChangeNotifier {
   List<Flashcard> _flashcards = [];
   final List<String> _deepPrompts = [];
   final List<String> _conceptTopics = [];
+  final Map<String, List<String>> _conceptGroups = {};
   List<QuizItem> _quizzes = [];
 
   // --- Progress (lightweight) ---
@@ -75,10 +76,13 @@ class ContentProvider extends ChangeNotifier {
   String? get summary => _summary?.isNotEmpty == true ? _summary : null;
   List<Flashcard> get flashcards => _flashcards;
   List<String> get deepPrompts => List.unmodifiable(_deepPrompts);
-  bool get hasDeepPrompts => _deepPrompts.isNotEmpty;
+  bool get hasDeep => _deepPrompts.isNotEmpty;
 
   List<String> get conceptTopics => List.unmodifiable(_conceptTopics);
-  bool get hasConceptTopics => _conceptTopics.isNotEmpty;
+  Map<String, List<String>> get conceptGroups =>
+      Map.unmodifiable(_conceptGroups);
+  bool get hasConcepts =>
+      _conceptGroups.isNotEmpty || _conceptTopics.isNotEmpty;
 
   List<QuizItem> get quizzes => _quizzes;
 
@@ -94,6 +98,7 @@ class ContentProvider extends ChangeNotifier {
       _flashcards.isNotEmpty ||
       _deepPrompts.isNotEmpty ||
       _conceptTopics.isNotEmpty ||
+      _conceptGroups.isNotEmpty ||
       _quizzes.isNotEmpty;
 
   // Convenience flags for content availability
@@ -184,9 +189,16 @@ class ContentProvider extends ChangeNotifier {
         data['concept_map'] ??
         data['contextual_association'] ??
         (data['concept']?['topics']);
-    _conceptTopics
-      ..clear()
-      ..addAll(_toStringList(concept));
+    _conceptGroups.clear();
+    _conceptTopics.clear();
+    if (concept is Map) {
+      final m = Map<String, dynamic>.from(concept as Map);
+      m.forEach((key, value) {
+        _conceptGroups[key.toString()] = _toStringList(value);
+      });
+    } else {
+      _conceptTopics.addAll(_toStringList(concept));
+    }
 
     notifyListeners();
   }
@@ -340,6 +352,7 @@ class ContentProvider extends ChangeNotifier {
     _summary = null;
     _flashcards.clear();
     _deepPrompts.clear();
+    _conceptGroups.clear();
     _conceptTopics.clear();
     _quizzes.clear();
     _flashIndex = 0;

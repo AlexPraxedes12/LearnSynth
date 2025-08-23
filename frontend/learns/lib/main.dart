@@ -51,10 +51,9 @@ class StudyApp extends StatelessWidget {
         AppRoutes.analyzing: (_) => const AnalyzingScreen(),
         AppRoutes.studyPack: (_) => const MethodSelectionScreen(),
         Routes.methodSelection: (_) => const MethodSelectionScreen(),
-        Routes.deepUnderstanding: (_) => const DeepUnderstandingScreen(),
+        Routes.deep: (_) => const DeepUnderstandingScreen(),
         Routes.memorization: (_) => const MemorizationScreen(),
-        Routes.contextualAssociation: (_) =>
-            const ContextualAssociationScreen(),
+        Routes.concept: (_) => const ContextualAssociationScreen(),
         Routes.quiz: (_) => const InteractiveEvaluationScreen(),
         Routes.progress: (_) => const ProgressScreen(),
       },
