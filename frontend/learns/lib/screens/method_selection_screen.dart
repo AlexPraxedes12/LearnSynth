@@ -1,51 +1,69 @@
 import 'package:flutter/material.dart';
-import '../widgets/method_card.dart';
-import '../constants.dart';
+import 'package:provider/provider.dart';
 
-/// Lists the available study methods. Each card navigates to its
-/// corresponding screen using a named route.
+import '../constants.dart';
+import '../content_provider.dart';
+import '../widgets/wide_button.dart';
+
 class MethodSelectionScreen extends StatelessWidget {
   const MethodSelectionScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final p = context.watch<ContentProvider>();
+
+    final enableFlash = p.flashcards.isNotEmpty;
+    final enableDeep = p.deepPrompts.isNotEmpty;
+    final enableConcept = p.conceptTopics.isNotEmpty;
+    final enableQuiz = p.quizzes.isNotEmpty;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Study Methods')),
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: ListView(
-          children: [
-            MethodCard(
-              icon: Icons.lightbulb_outline,
-              title: 'Deep Understanding',
-              description: 'Listen to explanations and see concept maps.',
-              onTap: () =>
-                  Navigator.pushNamed(context, Routes.deepUnderstanding),
-            ),
-            MethodCard(
-              icon: Icons.memory,
-              title: 'Memorization',
-              description: 'Use flashcards to remember key points.',
-              onTap: () => Navigator.pushNamed(context, Routes.memorization),
-            ),
-            MethodCard(
-              icon: Icons.share,
-              title: 'Contextual Association',
-              description: 'Relate concepts to real-life scenarios.',
-              onTap: () =>
-                  Navigator.pushNamed(context, Routes.contextualAssociation),
-            ),
-            MethodCard(
-              icon: Icons.quiz,
-              title: 'Interactive Evaluation',
-              description: 'Answer quiz questions to test knowledge.',
-              onTap: () =>
-                  Navigator.pushNamed(context, Routes.interactiveEvaluation),
-            ),
-          ],
-        ),
+      appBar: AppBar(title: const Text('Study Pack')),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Text('Summary', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          Text(p.summary ?? ''),
+
+          const SizedBox(height: 24),
+
+          WideButton(
+            label: 'Memorization (Flashcards)',
+            enabled: enableFlash,
+            onPressed: enableFlash
+                ? () => Navigator.pushNamed(context, Routes.memorization)
+                : null,
+          ),
+          const SizedBox(height: 12),
+
+          WideButton(
+            label: 'Deep Understanding',
+            enabled: enableDeep,
+            onPressed: enableDeep
+                ? () => Navigator.pushNamed(context, Routes.deepUnderstanding)
+                : null,
+          ),
+          const SizedBox(height: 12),
+
+          WideButton(
+            label: 'Contextual Association',
+            enabled: enableConcept,
+            onPressed: enableConcept
+                ? () => Navigator.pushNamed(context, Routes.contextualAssociation)
+                : null,
+          ),
+          const SizedBox(height: 12),
+
+          WideButton(
+            label: 'Interactive Evaluation (Quiz)',
+            enabled: enableQuiz,
+            onPressed: enableQuiz
+                ? () => Navigator.pushNamed(context, Routes.interactiveEvaluation)
+                : null,
+          ),
+        ],
       ),
     );
   }
 }
-
