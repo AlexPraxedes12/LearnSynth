@@ -8,10 +8,11 @@ class Routes {
   static const String studyPack = '/studyPack';
   static const String analysis = studyPack;
   static const String methodSelection = '/method-selection';
-  static const String deepUnderstanding = '/deep-understanding';
+  static const String deepUnderstanding = '/deep';
   static const String memorization = '/memorization';
-  static const String contextualAssociation = '/contextual-association';
-  static const String interactiveEvaluation = '/interactive-evaluation';
+  static const String contextualAssociation = '/concept';
+  static const String quiz = '/quiz';
+  static const String interactiveEvaluation = quiz;
   static const String progress = '/progress';
   static const String addContent = '/add-content';
   static const String pdfPicker = '/pdf-picker';

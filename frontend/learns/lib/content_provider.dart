@@ -59,8 +59,8 @@ class ContentProvider extends ChangeNotifier {
   // --- Content ---
   String? _summary;
   List<Flashcard> _flashcards = [];
-  List<String> _conceptTopics = [];
-  List<String> _deepPrompts = [];
+  final List<String> _deepPrompts = [];
+  final List<String> _conceptTopics = [];
   List<QuizItem> _quizzes = [];
 
   // --- Progress (lightweight) ---
@@ -74,8 +74,12 @@ class ContentProvider extends ChangeNotifier {
   String? get rawText => _rawText;
   String? get summary => _summary?.isNotEmpty == true ? _summary : null;
   List<Flashcard> get flashcards => _flashcards;
-  List<String> get conceptTopics => _conceptTopics;
-  List<String> get deepPrompts => _deepPrompts;
+  List<String> get deepPrompts => List.unmodifiable(_deepPrompts);
+  bool get hasDeepPrompts => _deepPrompts.isNotEmpty;
+
+  List<String> get conceptTopics => List.unmodifiable(_conceptTopics);
+  bool get hasConceptTopics => _conceptTopics.isNotEmpty;
+
   List<QuizItem> get quizzes => _quizzes;
 
   int get flashIndex => _flashIndex;
@@ -94,8 +98,6 @@ class ContentProvider extends ChangeNotifier {
 
   // Convenience flags for content availability
   bool get hasMemorization => _flashcards.isNotEmpty;
-  bool get hasDeepUnderstanding => _deepPrompts.isNotEmpty;
-  bool get hasContextualAssociation => _conceptTopics.isNotEmpty;
   bool get hasQuiz => _quizzes.isNotEmpty;
 
   set content(String? v) {
@@ -151,13 +153,42 @@ class ContentProvider extends ChangeNotifier {
         .toList();
   }
 
-  List<String> _coerceTopics(dynamic raw) {
-    if (raw is List) {
-      return raw.map((e) => e.toString()).toList();
-    } else if (raw is Map) {
-      return raw.values.map((e) => e.toString()).toList();
+  List<String> _toStringList(dynamic v) {
+    if (v == null) return const [];
+    if (v is List) {
+      return v
+          .map((e) => e?.toString() ?? '')
+          .where((s) => s.isNotEmpty)
+          .toList();
     }
-    return [];
+    return [v.toString()];
+  }
+
+  void setAnalysis(Map<String, dynamic> data) {
+    String _toStr(dynamic v) => (v ?? '').toString().trim();
+
+    _summary = _toStr(data['summary'] ?? data['synopsis']);
+    _flashcards = _coerceFlashcards(data['flashcards'] ?? data['cards']);
+    _quizzes = _coerceQuiz(data['quiz'] ?? data['quizzes']);
+
+    final deep = data['deep_prompts'] ??
+        data['deepPrompts'] ??
+        data['deep_understanding'] ??
+        data['reflective_prompts'];
+    _deepPrompts
+      ..clear()
+      ..addAll(_toStringList(deep));
+
+    final concept = data['concept_topics'] ??
+        data['conceptMap'] ??
+        data['concept_map'] ??
+        data['contextual_association'] ??
+        (data['concept']?['topics']);
+    _conceptTopics
+      ..clear()
+      ..addAll(_toStringList(concept));
+
+    notifyListeners();
   }
 
   // --- Selection helpers ---
@@ -248,21 +279,7 @@ class ContentProvider extends ChangeNotifier {
 
       final Map<String, dynamic> data = jsonDecode(resp.body);
 
-      String _toStr(dynamic v) => (v ?? '').toString().trim();
-      List<String> _toStrList(dynamic v) =>
-          (v as List? ?? const [])
-              .map((e) => e?.toString() ?? '')
-              .where((e) => e.isNotEmpty)
-              .toList();
-
-      _summary = _toStr(data['summary']);
-      _flashcards =
-          _coerceFlashcards(data['flashcards'] ?? data['cards']);
-      _conceptTopics =
-          _toStrList(data['topics'] ?? data['concepts']);
-      _deepPrompts =
-          _toStrList(data['deep_prompts'] ?? data['deep']);
-      _quizzes = _coerceQuiz(data['quiz'] ?? data['quizzes']);
+      setAnalysis(data);
 
       final baseForHash =
           _summary?.isNotEmpty == true

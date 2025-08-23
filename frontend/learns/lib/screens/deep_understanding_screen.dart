@@ -1,50 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../content_provider.dart';
-import '../widgets/wide_button.dart';
 
-class DeepUnderstandingScreen extends StatefulWidget {
+class DeepUnderstandingScreen extends StatelessWidget {
   const DeepUnderstandingScreen({super.key});
-  @override
-  State<DeepUnderstandingScreen> createState() => _DeepUnderstandingScreenState();
-}
-
-class _DeepUnderstandingScreenState extends State<DeepUnderstandingScreen> {
-  final _notes = <String, String>{};
 
   @override
   Widget build(BuildContext context) {
-    final p = context.watch<ContentProvider>();
+    final prompts = context.watch<ContentProvider>().deepPrompts;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Deep Understanding')),
-      body: ListView(
+      body: ListView.separated(
         padding: const EdgeInsets.all(16),
-        children: [
-          if (p.deepPrompts.isEmpty)
-            const Text('No reflective prompts available.'),
-          for (final q in p.deepPrompts) ...[
-            Text(q, style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            TextField(
-              minLines: 2, maxLines: 5,
-              decoration: const InputDecoration(
-                hintText: 'Your reflection...',
-                border: OutlineInputBorder(),
+        itemCount: prompts.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
+        itemBuilder: (ctx, i) {
+          return Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                prompts[i],
+                style: const TextStyle(fontSize: 16),
               ),
-              onChanged: (v) => _notes[q] = v,
             ),
-            const SizedBox(height: 16),
-          ],
-          const SizedBox(height: 12),
-          WideButton(
-            label: 'Mark as done',
-            enabled: p.deepPrompts.isNotEmpty,
-            onPressed: () {
-              p.markDeepDone();
-              Navigator.pop(context);
-            },
-          ),
-        ],
+          );
+        },
       ),
     );
   }
