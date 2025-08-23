@@ -26,16 +26,11 @@ class ConceptGroup {
   final String title;
   final List<String> topics;
   ConceptGroup({required this.title, required this.topics});
-  factory ConceptGroup.fromMap(Map<String, dynamic> m) {
-    final title = (m['title'] ?? m['group'] ?? 'Topics').toString();
-    final raw =
-        (m['topics'] ?? m['items'] ?? m['concepts'] ?? const []) as List;
-    final topics = raw
-        .map((e) => e.toString())
-        .where((s) => s.trim().isNotEmpty)
-        .toList();
-    return ConceptGroup(title: title, topics: topics);
-  }
+  factory ConceptGroup.fromMap(Map<String, dynamic> m) => ConceptGroup(
+        title: (m['title'] ?? m['name'] ?? 'Topics').toString(),
+        topics: List<String>.from(
+            (m['topics'] ?? m['items'] ?? const []).map((e) => e.toString())),
+      );
 }
 
 enum StudyMode { memorization, deep_understanding, contextual_association, interactive_evaluation }
@@ -106,8 +101,11 @@ class ContentProvider extends ChangeNotifier {
   String? get summary => _summary?.isNotEmpty == true ? _summary : null;
   List<Flashcard> get flashcards => _flashcards;
   List<DeepPrompt> get deepPrompts => _deepPrompts;
-  List<ConceptGroup> get conceptGroups => _conceptGroups;
-  List<String> get flatConceptTopics => _conceptTopics;
+  List<ConceptGroup> get conceptGroups => List.unmodifiable(_conceptGroups);
+  List<String> get conceptTopics => _conceptGroups.isEmpty
+      ? List<String>.from(_conceptTopics)
+      : _conceptGroups.expand((g) => g.topics).toSet().toList();
+  bool get hasConceptGroups => _conceptGroups.isNotEmpty;
 
   // Availability flags used by CTAs
   bool get canDeep => _deepPrompts.isNotEmpty; // drives Study Pack CTA
@@ -200,30 +198,21 @@ class ContentProvider extends ChangeNotifier {
       ..addAll(_coerceQuiz(data['quiz'] ?? data['quizzes']));
 
     // ---- Concept Map (grouped OR flat) normalization ----
-    final rawConcept =
-        data['concept_map'] ?? data['concepts'] ?? data['contextual_association'] ?? data['topics'];
     _conceptGroups.clear();
     _conceptTopics.clear();
-    if (rawConcept is Map && rawConcept.isNotEmpty) {
-      rawConcept.forEach((k, v) {
-        final list = (v as List? ?? const [])
-            .map((e) => e.toString())
-            .where((s) => s.trim().isNotEmpty)
-            .toList();
-        if (list.isNotEmpty) {
-          _conceptGroups.add(ConceptGroup(title: k.toString(), topics: list));
-        }
-      });
-    } else if (rawConcept is List && rawConcept.isNotEmpty) {
-      if (rawConcept.first is Map) {
-        _conceptGroups = rawConcept
-            .whereType<Map>()
-            .map((m) => ConceptGroup.fromMap(Map<String, dynamic>.from(m)))
-            .where((g) => g.topics.isNotEmpty)
-            .toList();
-      } else {
-        _conceptTopics.addAll(
-            rawConcept.map((e) => e.toString()).where((s) => s.trim().isNotEmpty));
+    final cmap = data['concept_map'];
+    if (cmap is Map && cmap['groups'] is List) {
+      _conceptGroups = (cmap['groups'] as List)
+          .whereType<Map>()
+          .map((m) => ConceptGroup.fromMap(Map<String, dynamic>.from(m)))
+          .where((g) => g.topics.isNotEmpty)
+          .toList();
+    }
+    if (_conceptGroups.isEmpty) {
+      final rawTopics = data['concepts'];
+      if (rawTopics is List) {
+        _conceptTopics
+            .addAll(rawTopics.map((e) => e.toString()));
       }
     }
 
@@ -240,7 +229,7 @@ class ContentProvider extends ChangeNotifier {
 
     if (kDebugMode) {
       debugPrint('[ContentProvider] keys: ${data.keys.toList()}');
-      debugPrint('[ContentProvider] deepPrompts: ${_deepPrompts.length} | groups: ${_conceptGroups.length} | flatTopics: ${_conceptTopics.length}');
+      debugPrint('[ContentProvider] deepPrompts: ${_deepPrompts.length} | groups: ${_conceptGroups.length} | topics: ${_conceptTopics.length}');
     }
 
     notifyListeners();
