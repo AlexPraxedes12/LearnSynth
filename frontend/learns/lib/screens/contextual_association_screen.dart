@@ -9,65 +9,48 @@ class ContextualAssociationScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = context.watch<ContentProvider>();
-    final groups = p.conceptGroups;
-    final topics = p.conceptTopics;
-
-    return Scaffold(
-      appBar: AppBar(title: const Text('Concept Map')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: groups.isNotEmpty
-            ? ListView(
-                children: groups.entries.map((e) {
-                  final title = e.key;
-                  final children = e.value;
-                  return Card(
-                    child: ExpansionTile(
-                      title: Text(title,
-                          style: Theme.of(context).textTheme.titleMedium),
-                      children: [
-                        const Divider(height: 1),
-                        Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: children
-                                .map((t) => Padding(
-                                      padding:
-                                          const EdgeInsets.symmetric(vertical: 6),
-                                      child: Row(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          const Text('• '),
-                                          Expanded(child: Text(t)),
-                                        ],
-                                      ),
-                                    ))
-                                .toList(),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }).toList(),
-              )
-            : (topics.isNotEmpty
-                ? SingleChildScrollView(
+    if (p.conceptGroups.isNotEmpty) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Concept Map')),
+        body: ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: p.conceptGroups.length,
+          itemBuilder: (_, i) {
+            final g = p.conceptGroups[i];
+            return Card(
+              margin: const EdgeInsets.only(bottom: 12),
+              child: ExpansionTile(
+                title: Text(g.title),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
                     child: Wrap(
                       spacing: 8,
                       runSpacing: 8,
-                      children: topics
-                          .map((t) => Chip(
-                                label: Text(t),
-                                materialTapTargetSize:
-                                    MaterialTapTargetSize.shrinkWrap,
-                              ))
-                          .toList(),
+                      children:
+                          g.topics.map((t) => Chip(label: Text(t))).toList(),
                     ),
-                  )
-                : const Center(child: Text('No concepts available.'))),
-      ),
-    );
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      );
+    } else {
+      // Fallback: flat topics
+      return Scaffold(
+        appBar: AppBar(title: const Text('Concept Map')),
+        body: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children:
+                p.conceptTopics.map((t) => Chip(label: Text(t))).toList(),
+          ),
+        ),
+      );
+    }
   }
 }

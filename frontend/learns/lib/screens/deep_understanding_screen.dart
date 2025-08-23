@@ -46,7 +46,7 @@ class _DeepUnderstandingScreenState extends State<DeepUnderstandingScreen> {
             Text('Prompt ${_i + 1} of ${prompts.length}',
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
-            Text(prompts[_i],
+            Text(prompts[_i].prompt,
                 style: Theme.of(context).textTheme.bodyLarge),
             const SizedBox(height: 16),
             TextField(
