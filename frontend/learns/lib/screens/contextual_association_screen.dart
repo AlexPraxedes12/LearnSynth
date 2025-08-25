@@ -63,8 +63,8 @@ class ContextualAssociationScreen extends StatelessWidget {
 
       final config = BuchheimWalkerConfiguration()
         ..siblingSeparation = 20
-        ..levelSeparation = 30
-        ..subtreeSeparation = 20
+        ..levelSeparation = 80
+        ..subtreeSeparation = 60
         ..orientation = BuchheimWalkerConfiguration.ORIENTATION_TOP_BOTTOM;
 
       final algorithm = BuchheimWalkerAlgorithm(
