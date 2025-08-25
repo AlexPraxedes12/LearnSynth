@@ -36,9 +36,10 @@ class ContextualAssociationScreen extends StatelessWidget {
       if (groups.isNotEmpty) {
         for (var i = 0; i < groups.length; i++) {
           final g = groups[i];
+          final color =
+              Colors.primaries[(i + 1) % Colors.primaries.length];
           final groupNode = getNode(g.title);
-          colorMap[g.title] = Colors.grey.shade700;
-          final color = Colors.primaries[i % Colors.primaries.length];
+          colorMap[g.title] = color;
           for (final topic in g.topics ?? []) {
             final topicNode = getNode(topic);
             colorMap[topic] = color;
@@ -51,12 +52,19 @@ class ContextualAssociationScreen extends StatelessWidget {
         for (var i = 0; i < flat.length; i++) {
           final topic = flat[i];
           final node = getNode(topic);
-          colorMap[topic] = Colors.primaries[i % Colors.primaries.length];
+          colorMap[topic] =
+              Colors.primaries[(i + 1) % Colors.primaries.length];
           graph.addEdge(root, node);
         }
       }
 
-      final builder = FruchtermanReingoldAlgorithm();
+      final builder = BuchheimWalkerAlgorithm(
+        BuchheimWalkerConfiguration()
+          ..siblingSeparation = 20
+          ..levelSeparation = 30
+          ..subtreeSeparation = 20
+          ..orientation = BuchheimWalkerConfiguration.ORIENTATION_TOP_BOTTOM,
+      );
       return InteractiveViewer(
         constrained: false,
         boundaryMargin: const EdgeInsets.all(100),
@@ -84,8 +92,9 @@ class ContextualAssociationScreen extends StatelessWidget {
             for (var i = 0; i < groups.length; i++)
               Chip(
                 label: Text(groups[i].title),
-                backgroundColor:
-                    Colors.primaries[i % Colors.primaries.length].withOpacity(0.3),
+                backgroundColor: Colors
+                    .primaries[(i + 1) % Colors.primaries.length]
+                    .withOpacity(0.3),
               ),
           ],
         ),

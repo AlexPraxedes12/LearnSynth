@@ -74,7 +74,7 @@ def analyze_text(text: str = Body(..., embed=True)):
         "Analyze the following text and respond only in JSON with the keys:\n"
         "{\n"
         '  "summary": str,\n'
-        '  "concept_map": [str, ...],\n'
+        '  "concept_map": {"groups": [{"title": str, "topics": [str, ...]}]},\n'
         '  "flashcards": [{"term": str, "definition": str}],\n'
         '  "quiz": [{"question": str, "options": [str, ...], "answer": str}],\n'
         '  "spaced_repetition": [str, ...],\n'
@@ -94,7 +94,7 @@ def analyze_text(text: str = Body(..., embed=True)):
         return {
             "summary": data.get("summary", ""),
             "concept_map": data.get("concept_map")
-            or data.get("conceptMap", []),
+            or data.get("conceptMap", {"groups": []}),
             "flashcards": data.get("flashcards", []),
             "quiz": data.get("quiz") or data.get("quizQuestions", []),
             "spaced_repetition": data.get("spaced_repetition")
