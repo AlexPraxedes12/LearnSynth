@@ -15,14 +15,17 @@ class ContextualAssociationScreen extends StatelessWidget {
     final flat = p.conceptTopics;
 
     /// Returns a simple node widget with the given [text] and [color].
-    Widget nodeWidget(String text, Color color) => Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.2),
-            border: Border.all(color: color),
-            borderRadius: BorderRadius.circular(4),
+    Widget nodeWidget(String text, Color color) => SizedBox(
+          width: 120,
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.2),
+              border: Border.all(color: color),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(text),
           ),
-          child: Text(text),
         );
 
     /// Builds the graph using [graphview] based on the available concept data.
