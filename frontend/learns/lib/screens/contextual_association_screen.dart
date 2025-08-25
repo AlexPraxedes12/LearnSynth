@@ -27,7 +27,7 @@ class ContextualAssociationScreen extends StatelessWidget {
                       Wrap(
                         spacing: 8,
                         runSpacing: 8,
-                        children: g.topics.map(chip).toList(),
+                        children: (g.topics?.map<Widget>(chip).toList() ?? const <Widget>[]),
                       ),
                     ],
                   ))
