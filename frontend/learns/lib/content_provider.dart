@@ -25,7 +25,7 @@ class DeepPrompt {
 
 class ConceptGroup {
   final String title;
-  final List<String> topics;
+  final List<String>? topics;
   ConceptGroup({required this.title, required this.topics});
 
   factory ConceptGroup.fromMap(Map<String, dynamic> m) {
@@ -85,8 +85,8 @@ class ContentProvider extends ChangeNotifier {
   String? _summary;
   final List<Flashcard> _flashcards = [];
   final List<QuizItem> _quizzes = [];
-  List<DeepPrompt> _deepPrompts = [];
-  List<ConceptGroup> _conceptGroups = [];
+  List<DeepPrompt>? _deepPrompts;
+  List<ConceptGroup>? _conceptGroups;
   List<String> _conceptTopics = [];
 
   // --- Progress (lightweight) ---
@@ -101,13 +101,14 @@ class ContentProvider extends ChangeNotifier {
   String? get rawText => _rawText;
   String? get summary => _summary?.isNotEmpty == true ? _summary : null;
   List<Flashcard> get flashcards => _flashcards;
-  List<DeepPrompt> get deepPrompts => _deepPrompts;
-  List<ConceptGroup> get conceptGroups => _conceptGroups;
+  List<DeepPrompt> get deepPrompts => _deepPrompts ?? [];
+  List<ConceptGroup> get conceptGroups => _conceptGroups ?? [];
   List<String> get conceptTopics => _conceptTopics;
 
-  bool get canDeep => _deepPrompts.isNotEmpty;
+  bool get canDeep => _listNotEmpty(_deepPrompts);
   bool get hasDeep => canDeep; // backward compatibility
-  bool get canConcept => _conceptGroups.isNotEmpty || _conceptTopics.isNotEmpty;
+  bool get canConcept =>
+      _listNotEmpty(_conceptGroups) || _conceptTopics.isNotEmpty;
 
   List<QuizItem> get quizzes => _quizzes;
 
@@ -122,8 +123,8 @@ class ContentProvider extends ChangeNotifier {
   bool get hasAnalysis =>
       (summary?.isNotEmpty ?? false) ||
       _flashcards.isNotEmpty ||
-      _deepPrompts.isNotEmpty ||
-      _conceptGroups.isNotEmpty ||
+      _listNotEmpty(_deepPrompts) ||
+      _listNotEmpty(_conceptGroups) ||
       _conceptTopics.isNotEmpty ||
       _quizzes.isNotEmpty;
 
@@ -153,6 +154,9 @@ class ContentProvider extends ChangeNotifier {
     final sum = bytes.fold<int>(0, (a, b) => (a + b) & 0x7fffffff);
     return sum.toRadixString(36);
   }
+
+  bool _notEmpty(String? s) => s != null && s.trim().isNotEmpty;
+  bool _listNotEmpty<T>(List<T>? l) => l != null && l.isNotEmpty;
 
   Future<void> _saveProgress() async {
     if (_contentHash.isEmpty) return;
@@ -198,7 +202,7 @@ class ContentProvider extends ChangeNotifier {
                 .toList();
             return ConceptGroup(title: title, topics: topics);
           })
-          .where((g) => g.topics.isNotEmpty)
+          .where((g) => (g.topics ?? []).isNotEmpty)
           .toList();
     }
     if (cm is List) {
@@ -313,16 +317,22 @@ class ContentProvider extends ChangeNotifier {
 
       // Concept map
       _conceptGroups = _parseConceptMap(data['concept_map']);
-      _conceptTopics = _conceptGroups.length == 1 &&
-              _conceptGroups.first.title == 'Topics'
-          ? _conceptGroups.first.topics
+
+      // --- Concept map (null-safe) ---
+      final groups = _conceptGroups ?? [];
+      _conceptTopics = (groups.length == 1 && groups.first.title == 'Topics')
+          ? (groups.first.topics ?? [])
           : [];
 
+      // Enable CTAs only if there is something to show
       _canContinue =
-          _summary.isNotEmpty || _deepPrompts.isNotEmpty || _conceptGroups.isNotEmpty;
+          _notEmpty(_summary) || _listNotEmpty(_deepPrompts) || groups.isNotEmpty;
 
-      final baseForHash =
-          _summary.isNotEmpty ? _summary! : _flashcards.map((f) => f.term).join('|');
+      // --- Hash base (null-safe) ---
+      final baseForHash = _notEmpty(_summary)
+          ? _summary!.trim()
+          : _flashcards.map((f) => f.term).join('|');
+
       _contentHash = baseForHash.isNotEmpty ? _hash(baseForHash) : '';
       await _loadProgress();
       await _saveProgress();
@@ -355,8 +365,8 @@ class ContentProvider extends ChangeNotifier {
   }
 
   void setDeepIndex(int idx) {
-    _deepIndex =
-        idx.clamp(0, _deepPrompts.isEmpty ? 0 : _deepPrompts.length - 1);
+    final max = _listNotEmpty(_deepPrompts) ? _deepPrompts!.length - 1 : 0;
+    _deepIndex = idx.clamp(0, max);
     _saveProgress();
     notifyListeners();
   }
@@ -384,8 +394,8 @@ class ContentProvider extends ChangeNotifier {
     _canContinue = false;
     _summary = null;
     _flashcards.clear();
-    _deepPrompts = [];
-    _conceptGroups = [];
+    _deepPrompts = null;
+    _conceptGroups = null;
     _conceptTopics = [];
     _quizzes.clear();
     _flashIndex = 0;
