@@ -28,15 +28,14 @@ class _AnalyzingScreenState extends State<AnalyzingScreen> {
       final msg = (provider.lastError?.isNotEmpty ?? false)
           ? provider.lastError!
           : 'Analyze failed. Please try again.';
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(msg)));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
       Navigator.of(context).pop();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
       appBar: AppBar(title: Text('Analyzing')),
       body: Center(child: CircularProgressIndicator()),
       bottomNavigationBar: Padding(
