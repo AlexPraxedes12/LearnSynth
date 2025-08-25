@@ -58,13 +58,17 @@ class ContextualAssociationScreen extends StatelessWidget {
         }
       }
 
-      final builder = BuchheimWalkerAlgorithm(
-        BuchheimWalkerConfiguration()
-          ..siblingSeparation = 20
-          ..levelSeparation = 30
-          ..subtreeSeparation = 20
-          ..orientation = BuchheimWalkerConfiguration.ORIENTATION_TOP_BOTTOM,
+      final config = BuchheimWalkerConfiguration()
+        ..siblingSeparation = 20
+        ..levelSeparation = 30
+        ..subtreeSeparation = 20
+        ..orientation = BuchheimWalkerConfiguration.ORIENTATION_TOP_BOTTOM;
+
+      final algorithm = BuchheimWalkerAlgorithm(
+        config,
+        TreeEdgeRenderer(config),
       );
+
       return InteractiveViewer(
         constrained: false,
         boundaryMargin: const EdgeInsets.all(100),
@@ -72,7 +76,7 @@ class ContextualAssociationScreen extends StatelessWidget {
         maxScale: 5,
         child: GraphView(
           graph: graph,
-          algorithm: builder,
+          algorithm: algorithm,
           builder: (Node node) {
             final id = node.key!.value as String;
             return nodeWidget(id, colorMap[id] ?? Colors.blue);
