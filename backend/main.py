@@ -89,6 +89,8 @@ def analyze_text(text: str = Body(..., embed=True)):
         except Exception:
             data = {"summary": result}
 
+        deep_prompts = make_deep_prompts(text)
+
         return {
             "summary": data.get("summary", ""),
             "concept_map": data.get("concept_map")
@@ -98,6 +100,7 @@ def analyze_text(text: str = Body(..., embed=True)):
             "spaced_repetition": data.get("spaced_repetition")
             or data.get("spacedRepetition", []),
             "progress": data.get("progress", {"completion": 0.0, "masteryLevel": ""}),
+            "deep_prompts": deep_prompts,
         }
     except HTTPException as e:
         raise e

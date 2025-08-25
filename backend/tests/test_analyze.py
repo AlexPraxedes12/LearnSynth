@@ -109,6 +109,7 @@ def test_analyze_text_schema(monkeypatch):
         "quiz",
         "spaced_repetition",
         "progress",
+        "deep_prompts",
     }
     assert isinstance(result["concept_map"], list)
     assert all({"term", "definition"} <= set(card.keys()) for card in result["flashcards"])
@@ -117,3 +118,4 @@ def test_analyze_text_schema(monkeypatch):
     )
     assert isinstance(result["spaced_repetition"], list)
     assert {"completion", "masteryLevel"} <= set(result["progress"].keys())
+    assert isinstance(result["deep_prompts"], list)
