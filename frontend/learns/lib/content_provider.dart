@@ -81,8 +81,6 @@ class ContentProvider extends ChangeNotifier {
   bool get canContinue => _canContinue;
   String? get lastError => _lastError;
 
-  Future<bool>? _inflight;
-
   // --- Content ---
   String? _summary;
   final List<Flashcard> _flashcards = [];
@@ -188,50 +186,31 @@ class ContentProvider extends ChangeNotifier {
         .toList();
   }
 
-  void setAnalysis(Map<String, dynamic> data) {
-    String _toStr(dynamic v) => (v ?? '').toString().trim();
-
-    _summary = _toStr(data['summary'] ?? data['synopsis']);
-    _flashcards
-      ..clear()
-      ..addAll(_coerceFlashcards(data['flashcards'] ?? data['cards']));
-    _quizzes
-      ..clear()
-      ..addAll(_coerceQuiz(data['quiz'] ?? data['quizzes']));
-
-    // 1) Deep prompts
-    final deepList = (data['deep_prompts'] as List?) ?? const [];
-    _deepPrompts = deepList
-        .whereType<Map>()
-        .map((m) => DeepPrompt.fromMap(Map<String, dynamic>.from(m)))
-        .where((dp) => dp.prompt.isNotEmpty)
-        .toList();
-
-    // 2) Concept map (grouped + flat fallback)
-    final cm = (data['concept_map'] as Map?) ?? {};
-    final rawGroups = (cm['groups'] as List?) ?? const [];
-    _conceptGroups = rawGroups
-        .whereType<Map>()
-        .map((g) => ConceptGroup.fromMap(Map<String, dynamic>.from(g)))
-        .where((g) => g.topics.isNotEmpty)
-        .toList();
-
-    final flat = (data['concepts'] as List? ?? data['topics'] as List? ?? const [])
-        .map((e) => e.toString())
-        .where((s) => s.trim().isNotEmpty)
-        .toList();
-    _conceptTopics = flat;
-
-    // If no groups came but we do have a flat list, synthesize one group
-    if (_conceptGroups.isEmpty && _conceptTopics.isNotEmpty) {
-      _conceptGroups = [ConceptGroup(title: 'Topics', topics: _conceptTopics)];
+  List<ConceptGroup> _parseConceptMap(dynamic cm) {
+    if (cm is Map && cm['groups'] is List) {
+      return (cm['groups'] as List)
+          .map((g) {
+            final m = (g as Map?) ?? const {};
+            final title = (m['title'] ?? m['group'] ?? 'Topics').toString();
+            final topics = ((m['topics'] as List?) ?? const [])
+                .map((t) => t.toString())
+                .where((t) => t.trim().isNotEmpty)
+                .toList();
+            return ConceptGroup(title: title, topics: topics);
+          })
+          .where((g) => g.topics.isNotEmpty)
+          .toList();
     }
-
-    // Optional: debug trace
-    debugPrint(
-        'deep=${_deepPrompts.length} groups=${_conceptGroups.length} flat=${_conceptTopics.length}');
-
-    notifyListeners();
+    if (cm is List) {
+      final topics = cm
+          .map((t) => t.toString())
+          .where((t) => t.trim().isNotEmpty)
+          .toList();
+      return topics.isEmpty
+          ? <ConceptGroup>[]
+          : [ConceptGroup(title: 'Topics', topics: topics)];
+    }
+    return <ConceptGroup>[];
   }
 
   // --- Selection helpers ---
@@ -255,150 +234,113 @@ class ContentProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Single-flight runner used by the Analyzing screen.
-  Future<void> ensureAnalysisStarted() async {
-    if (_isAnalyzing || _canContinue) return;
+  Future<bool>? _inflightAnalysis;
+
+  Future<bool> runAnalysis() {
+    _inflightAnalysis ??= _runAnalysisInternal();
+    return _inflightAnalysis!;
+  }
+
+  Future<bool> _runAnalysisInternal() async {
+    if (_isAnalyzing) return _canContinue;
 
     _isAnalyzing = true;
     _lastError = null;
     notifyListeners();
 
     try {
-      if (_selectedAudio != null) {
-        final txt = await TranscriptionService().sendFile(_selectedAudio!);
-        _rawText = txt ?? '';
-      } else if (_selectedVideo != null) {
-        final txt = await TranscriptionService().sendFile(_selectedVideo!);
-        _rawText = txt ?? '';
-      } else if ((_rawText ?? '').isNotEmpty) {
-        // text already provided
-      } else {
-        throw StateError('No file selected');
+      // Ensure we have text to analyze, transcribing if necessary.
+      String text = (_rawText?.trim().isNotEmpty == true ? _rawText! : _content ?? '').trim();
+      if (text.isEmpty && _selectedAudio != null) {
+        text = (await TranscriptionService().sendFile(_selectedAudio!)) ?? '';
+        _rawText = text;
+        _content = text;
+      } else if (text.isEmpty && _selectedVideo != null) {
+        text = (await TranscriptionService().sendFile(_selectedVideo!)) ?? '';
+        _rawText = text;
+        _content = text;
       }
 
-      final ok = await runAnalysis();
-      _canContinue = ok == true;
-    } catch (e) {
-      _lastError = e.toString();
-      _canContinue = false;
-    } finally {
-      _isAnalyzing = false;
-      notifyListeners();
-    }
-  }
-
-  Future<bool> runAnalysis({String? textOverride}) {
-    _inflight ??=
-        _runAnalysisInternal(textOverride: textOverride).whenComplete(() {
-      _inflight = null;
-    });
-    return _inflight!;
-  }
-
-  Future<bool> _runAnalysisInternal({String? textOverride}) async {
-    _isAnalyzing = true;
-    _lastError = null;
-    _canContinue = false;
-    notifyListeners();
-
-    try {
-      final text = (textOverride ?? _rawText ?? '').trim();
+      text = text.trim();
       if (text.isEmpty) {
         _lastError = 'Nothing to analyze.';
         return false;
       }
 
-      final url = Uri.parse('http://10.0.2.2:8000/analyze');
-      final resp = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'text': text}),
-      );
+      final uri = Uri.parse('http://10.0.2.2:8000/analyze');
+      final resp = await http
+          .post(uri,
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode({'text': text}))
+          .timeout(const Duration(seconds: 60));
 
-      if (resp.statusCode != 200) {
+      if (resp.statusCode >= 500) {
+        throw Exception('Server error ${resp.statusCode}');
+      }
+      if (resp.statusCode >= 400) {
         _lastError = 'Analyze failed: ${resp.statusCode}';
         return false;
       }
 
       final Map<String, dynamic> data = jsonDecode(resp.body);
 
-      setAnalysis(data);
+      // Summary
+      _summary = (data['summary'] ?? '').toString().trim();
+
+      // Flashcards & quiz (tolerant)
+      _flashcards
+        ..clear()
+        ..addAll(_coerceFlashcards(data['flashcards'] ?? data['cards']));
+      _quizzes
+        ..clear()
+        ..addAll(_coerceQuiz(data['quiz'] ?? data['quizzes']));
+
+      // Deep prompts
+      final dp = data['deep_prompts'];
+      _deepPrompts = (dp is List)
+          ? dp
+              .map((e) {
+                final m = (e as Map?) ?? const {};
+                return DeepPrompt(
+                  prompt:
+                      (m['prompt'] ?? m['question'] ?? m['text'] ?? '').toString(),
+                  hint: (m['hint'] ?? m['explanation'] ?? '').toString(),
+                );
+              })
+              .where((p) => p.prompt.trim().isNotEmpty)
+              .toList()
+          : <DeepPrompt>[];
+
+      // Concept map
+      _conceptGroups = _parseConceptMap(data['concept_map']);
+      _conceptTopics = _conceptGroups.length == 1 &&
+              _conceptGroups.first.title == 'Topics'
+          ? _conceptGroups.first.topics
+          : [];
+
+      _canContinue =
+          _summary.isNotEmpty || _deepPrompts.isNotEmpty || _conceptGroups.isNotEmpty;
 
       final baseForHash =
-          _summary?.isNotEmpty == true
-              ? _summary!
-              : _flashcards.map((f) => f.term).join('|');
+          _summary.isNotEmpty ? _summary! : _flashcards.map((f) => f.term).join('|');
       _contentHash = baseForHash.isNotEmpty ? _hash(baseForHash) : '';
       await _loadProgress();
-      await fetchStudyMode(textOverride: text);
       await _saveProgress();
-      _canContinue = true;
-      return true;
+      return _canContinue;
     } catch (e) {
       _lastError = e.toString();
-      _canContinue = false;
       return false;
     } finally {
       _isAnalyzing = false;
+      _inflightAnalysis = null;
       notifyListeners();
     }
   }
   
-  Future<void> fetchStudyMode({String? textOverride}) async {
-    final text = (textOverride ?? _rawText ?? '').trim();
-    if (text.isEmpty) return;
-
-    try {
-      final url = Uri.parse('http://10.0.2.2:8000/study-mode');
-      final resp = await http.post(url,
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({'text': text}));
-      if (resp.statusCode != 200) return;
-      final Map<String, dynamic> data = jsonDecode(resp.body);
-
-      // 1) Deep prompts
-      final deepList = (data['deep_prompts'] as List?) ?? const [];
-      _deepPrompts = deepList
-          .whereType<Map>()
-          .map((m) => DeepPrompt.fromMap(Map<String, dynamic>.from(m)))
-          .where((dp) => dp.prompt.isNotEmpty)
-          .toList();
-
-      // 2) Concept map (grouped + flat fallback)
-      final cm = (data['concept_map'] as Map?) ?? {};
-      final rawGroups = (cm['groups'] as List?) ?? const [];
-      _conceptGroups = rawGroups
-          .whereType<Map>()
-          .map((g) => ConceptGroup.fromMap(Map<String, dynamic>.from(g)))
-          .where((g) => g.topics.isNotEmpty)
-          .toList();
-
-      final flat = (data['concepts'] as List? ?? data['topics'] as List? ?? const [])
-          .map((e) => e.toString())
-          .where((s) => s.trim().isNotEmpty)
-          .toList();
-      _conceptTopics = flat;
-
-      if (_conceptGroups.isEmpty && _conceptTopics.isNotEmpty) {
-        _conceptGroups = [ConceptGroup(title: 'Topics', topics: _conceptTopics)];
-      }
-
-      debugPrint(
-          'deep=${_deepPrompts.length} groups=${_conceptGroups.length} flat=${_conceptTopics.length}');
-
-      // Clamp persisted index to available prompts
-      _deepIndex =
-          _deepIndex.clamp(0, _deepPrompts.isEmpty ? 0 : _deepPrompts.length - 1);
-
-      notifyListeners();
-    } catch (_) {
-      // Ignore errors; deep prompts are optional
-    }
-  }
   // Legacy helpers used by older flows.
   Future<void> transcribeAndAnalyze(File file) async {
     setSelectedAudio(file);
-    await ensureAnalysisStarted();
+    await runAnalysis();
   }
 
   void resetTranscribeFlow() {
