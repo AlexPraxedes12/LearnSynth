@@ -69,7 +69,7 @@ class _DeepUnderstandingState extends State<DeepUnderstandingScreen> {
               style:
                   const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
             ),
-            if (current.hint != null && current.hint!.isNotEmpty) ...[
+            if (current.hint.isNotEmpty) ...[
               const SizedBox(height: 12),
               TextButton(
                 onPressed: () => setState(() => _showHint = !_showHint),
@@ -79,7 +79,7 @@ class _DeepUnderstandingState extends State<DeepUnderstandingScreen> {
                 Padding(
                   padding: const EdgeInsets.only(top: 4),
                   child: Text(
-                    current.hint!,
+                    current.hint,
                     style: const TextStyle(color: Colors.black54),
                   ),
                 ),
@@ -101,7 +101,7 @@ class _DeepUnderstandingState extends State<DeepUnderstandingScreen> {
                   child: ElevatedButton(
                     onPressed: () {
                       if (last) {
-                        _provider.markDeepDone();
+                        context.read<ContentProvider>().markDeepDone();
                         Navigator.pop(context);
                       } else {
                         _setIndex(_index + 1);
