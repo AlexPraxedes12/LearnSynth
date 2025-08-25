@@ -36,6 +36,13 @@ class ConceptGroup {
   }
 }
 
+class ConceptMapData {
+  final List<ConceptGroup> groups;
+  final List<String> nodes;
+  final List<Map<String, String>> relations;
+  ConceptMapData({required this.groups, required this.nodes, required this.relations});
+}
+
 enum StudyMode { memorization, deep_understanding, contextual_association, interactive_evaluation }
 
 class Flashcard {
@@ -88,6 +95,8 @@ class ContentProvider extends ChangeNotifier {
   List<DeepPrompt>? _deepPrompts;
   List<ConceptGroup>? _conceptGroups;
   List<String> _conceptTopics = [];
+  List<String> _conceptNodes = [];
+  List<Map<String, String>> _conceptRelations = [];
 
   // --- Progress (lightweight) ---
   int _flashIndex = 0;
@@ -104,6 +113,8 @@ class ContentProvider extends ChangeNotifier {
   List<DeepPrompt> get deepPrompts => _deepPrompts ?? [];
   List<ConceptGroup> get conceptGroups => _conceptGroups ?? [];
   List<String> get conceptTopics => _conceptTopics;
+  List<String> get conceptNodes => _conceptNodes;
+  List<Map<String, String>> get conceptRelations => _conceptRelations;
 
   bool get canDeep => _listNotEmpty(_deepPrompts);
   bool get hasDeep => canDeep; // backward compatibility
@@ -190,31 +201,43 @@ class ContentProvider extends ChangeNotifier {
         .toList();
   }
 
-  List<ConceptGroup> _parseConceptMap(dynamic cm) {
+  ConceptMapData _parseConceptMap(dynamic cm) {
+    final groups = <ConceptGroup>[];
+    final nodes = <String>[];
+    final relations = <Map<String, String>>[];
+
     if (cm is Map && cm['groups'] is List) {
-      return (cm['groups'] as List)
-          .map((g) {
-            final m = (g as Map?) ?? const {};
-            final title = (m['title'] ?? m['group'] ?? 'Topics').toString();
-            final topics = ((m['topics'] as List?) ?? const [])
-                .map((t) => t.toString())
-                .where((t) => t.trim().isNotEmpty)
-                .toList();
-            return ConceptGroup(title: title, topics: topics);
-          })
-          .where((g) => (g.topics ?? []).isNotEmpty)
-          .toList();
-    }
-    if (cm is List) {
+      for (final g in cm['groups'] as List) {
+        final m = (g as Map?) ?? const {};
+        final title = (m['title'] ?? m['group'] ?? 'Topics').toString();
+        final topics = ((m['topics'] as List?) ?? const [])
+            .map((t) => t.toString())
+            .where((t) => t.trim().isNotEmpty)
+            .toList();
+        if (topics.isEmpty) continue;
+        groups.add(ConceptGroup(title: title, topics: topics));
+        nodes.add(title);
+        for (final t in topics) {
+          nodes.add(t);
+          relations.add({'from': title, 'to': t});
+        }
+      }
+    } else if (cm is List) {
       final topics = cm
           .map((t) => t.toString())
           .where((t) => t.trim().isNotEmpty)
           .toList();
-      return topics.isEmpty
-          ? <ConceptGroup>[]
-          : [ConceptGroup(title: 'Topics', topics: topics)];
+      if (topics.isNotEmpty) {
+        groups.add(ConceptGroup(title: 'Topics', topics: topics));
+        nodes.add('Topics');
+        for (final t in topics) {
+          nodes.add(t);
+          relations.add({'from': 'Topics', 'to': t});
+        }
+      }
     }
-    return <ConceptGroup>[];
+
+    return ConceptMapData(groups: groups, nodes: nodes, relations: relations);
   }
 
   // --- Selection helpers ---
@@ -316,7 +339,10 @@ class ContentProvider extends ChangeNotifier {
           : <DeepPrompt>[];
 
       // Concept map
-      _conceptGroups = _parseConceptMap(data['concept_map']);
+      final cmap = _parseConceptMap(data['concept_map']);
+      _conceptGroups = cmap.groups;
+      _conceptNodes = cmap.nodes;
+      _conceptRelations = cmap.relations;
 
       // --- Concept map (null-safe) ---
       final groups = _conceptGroups ?? [];
@@ -397,6 +423,8 @@ class ContentProvider extends ChangeNotifier {
     _deepPrompts = null;
     _conceptGroups = null;
     _conceptTopics = [];
+    _conceptNodes = [];
+    _conceptRelations = [];
     _quizzes.clear();
     _flashIndex = 0;
     _deepIndex = 0;
