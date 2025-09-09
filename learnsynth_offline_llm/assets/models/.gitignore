@@ -1,0 +1,9 @@
+@'
+*.gguf
+*.bin
+*.onnx
+*.tflite
+*.zip
+*.apk
+!.gitkeep
+'@ | Out-File -Encoding utf8 .\learnsynth_offline_llm\assets\models\.gitignore -Force

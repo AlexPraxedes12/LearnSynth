@@ -1,0 +1,12 @@
+Get-FileHash *Qwen2.5-1.5B-Instruct-Q4_K_M.gguf
+En *Qwen2.5-1.5B-Instruct-Q4_K_M.gguf
++ *Qwen2.5-1.5B-Instruct-Q4_K_M.gguf
++ *Qwen2.5-1.5B-Instruct-Q4_K_M.gguf
++ *Qwen2.5-1.5B-Instruct-Q4_K_M.gguf
++ *Qwen2.5-1.5B-Instruct-Q4_K_M.gguf
+Get-FileHash *tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf
+En *tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf
++ *tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf
++ *tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf
++ *tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf
++ *tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf

@@ -1,0 +1,13 @@
+python-multipart
+PyMuPDF
+anthropic
+openai
+tiktoken
+pdf2image
+pytesseract
+requests
+fastapi
+uvicorn
+httpx
+sse-starlette
+replicate

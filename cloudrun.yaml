@@ -1,0 +1,21 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: learnsynth-api
+spec:
+  template:
+    spec:
+      containers:
+      - image: gcr.io/PROJECT_ID/learnsynth:latest
+        env:
+        - name: LLM_PROVIDER
+          value: oss
+        - name: LLM_FALLBACK_PROVIDER
+          value: openai
+        - name: OSS_API_BASE
+          value: https://YOUR-LLM-ENDPOINT/v1
+        - name: OSS_MODEL
+          value: Llama-3.1-8B-Instruct
+        # Add secret env refs for SaaS fallbacks if needed
+        # - name: OPENAI_API_KEY
+        #   valueFrom: {secretKeyRef: {name: openai-key, key: api-key}}

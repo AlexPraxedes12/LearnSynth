@@ -1,0 +1,7 @@
+ni .\learnsynth_offline_llm\assets\models\.gitkeep -ItemType File -Force
+# (opcional) refuerza ignorar localmente todo en models excepto .gitkeep
+'*.gguf
+*.bin
+*.onnx
+*.tflite
+!.gitkeep' | Out-File -Encoding utf8 .\learnsynth_offline_llm\assets\models\.gitignore -Force

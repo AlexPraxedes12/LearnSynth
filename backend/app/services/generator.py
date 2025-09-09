@@ -1,0 +1,276 @@
+import os, io, shutil, tempfile, logging, subprocess, shlex
+from pathlib import Path
+from fastapi import UploadFile, File, HTTPException
+from io import BytesIO
+import fitz  # PyMuPDF
+from pdf2image import convert_from_bytes, pdfinfo_from_bytes
+import pytesseract
+from openai import OpenAI
+
+from app.utils.llm import (
+    ask_llm,
+    split_text_into_chunks,
+    truncate_text_to_tokens,
+    estimate_tokens,
+    MAX_MODEL_TOKENS,
+)
+
+logger = logging.getLogger(__name__)
+
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
+OPENAI_TRANSCRIBE_MODEL = os.getenv("OPENAI_TRANSCRIBE_MODEL", "whisper-1")
+MAX_MEDIA_BYTES = int(os.getenv("MAX_MEDIA_BYTES", str(100 * 1024 * 1024)))
+
+client = OpenAI(api_key=OPENAI_API_KEY, base_url=OPENAI_BASE_URL)
+
+def _validate_stt_base_url():
+    # Warn (do NOT crash) if pointing to a non-official server (OSS usually lacks /v1/audio/transcriptions)
+    if OPENAI_BASE_URL.rstrip("/") != "https://api.openai.com/v1":
+        logger.warning(
+            "OPENAI_BASE_URL is %s (non-official). Most OSS servers do NOT support /v1/audio/transcriptions. "
+            "Use https://api.openai.com/v1 for Whisper.",
+            OPENAI_BASE_URL,
+        )
+    if not OPENAI_API_KEY:
+        logger.warning("OPENAI_API_KEY is empty; transcription will fail with 401.")
+
+_validate_stt_base_url()
+logger.info("Transcription model=%s base_url=%s", OPENAI_TRANSCRIBE_MODEL, OPENAI_BASE_URL)
+logger.info("MAX_MEDIA_BYTES=%s", MAX_MEDIA_BYTES)
+
+
+def _save_upload_to_named_temp(upload_file) -> str:
+    """
+    Save FastAPI UploadFile to a named temp file, preserving the original suffix.
+    This allows the OpenAI SDK to infer the format (mp3, wav, etc).
+    """
+    suffix = Path(upload_file.filename or "").suffix or ".mp3"
+    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+        upload_file.file.seek(0)
+        shutil.copyfileobj(upload_file.file, tmp)
+        tmp.flush()
+        return tmp.name
+
+
+def _convert_to_wav16k(src_path: str) -> str:
+    """
+    Optional fallback: convert any audio to 16 kHz mono WAV using ffmpeg,
+    then return the new path.
+    """
+    dst = tempfile.NamedTemporaryFile(suffix=".wav", delete=False).name
+    cmd = f'ffmpeg -y -i {shlex.quote(src_path)} -vn -ac 1 -ar 16000 -f wav {shlex.quote(dst)}'
+    subprocess.run(shlex.split(cmd), check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return dst
+
+
+def _ensure_size_ok(upload_file):
+    # Works with FastAPI UploadFile
+    upload_file.file.seek(0, os.SEEK_END)
+    size = upload_file.file.tell()
+    upload_file.file.seek(0)
+    if size > MAX_MEDIA_BYTES:
+        logger.info("File too large: %s bytes", size)
+        raise HTTPException(status_code=400, detail="File too large")
+
+
+def _extract_audio_to_tmp(video_upload_file, ext=".mp3"):
+    # Requires ffmpeg in PATH (already in Docker image)
+    with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as out:
+        out_path = out.name
+    with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as src:
+        src_path = src.name
+        video_upload_file.file.seek(0)
+        src.write(video_upload_file.file.read())
+    cmd = f'ffmpeg -y -i {shlex.quote(src_path)} -vn -ac 1 -ar 16000 -b:a 64k {shlex.quote(out_path)}'
+    subprocess.run(shlex.split(cmd), check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return out_path
+
+
+def transcribe_audio(file):
+    # If you have a size guard, keep it:
+    try:
+        _ensure_size_ok(file)
+    except NameError:
+        pass  # ignore if not present
+
+    try:
+        # 1) Save the upload with a proper extension
+        src_path = _save_upload_to_named_temp(file)
+
+        # 2) First attempt: send as-is so OpenAI can detect format by suffix
+        try:
+            with open(src_path, "rb") as fh:
+                resp = client.audio.transcriptions.create(
+                    model=OPENAI_TRANSCRIBE_MODEL,  # e.g. "whisper-1"
+                    file=fh,
+                )
+        except Exception as e:
+            # 3) If the format is not recognized, convert to WAV 16k and retry once
+            if "Unrecognized file format" in str(e):
+                wav_path = _convert_to_wav16k(src_path)
+                with open(wav_path, "rb") as fh:
+                    resp = client.audio.transcriptions.create(
+                        model=OPENAI_TRANSCRIBE_MODEL,
+                        file=fh,
+                    )
+            else:
+                raise
+
+        text = getattr(resp, "text", None) or (resp.get("text") if isinstance(resp, dict) else None)
+        if not text:
+            raise RuntimeError("Empty transcription")
+        return text.strip()
+
+    except Exception as exc:
+        msg = str(exc)
+        if "Unrecognized file format" in msg:
+            raise HTTPException(status_code=400, detail="Unsupported or unrecognized audio format")
+        if "Connection refused" in msg or "APIConnectionError" in msg:
+            raise HTTPException(status_code=502, detail=f"Transcription backend not reachable at {OPENAI_BASE_URL}")
+        if "401" in msg or "Unauthorized" in msg:
+            raise HTTPException(status_code=401, detail="Invalid or missing OPENAI_API_KEY")
+        if "429" in msg or "Rate limit" in msg:
+            raise HTTPException(status_code=429, detail="Transcription rate limited; please retry")
+        logger.exception("Transcription failed")
+        raise HTTPException(status_code=500, detail="Transcription failed")
+
+
+def transcribe_video(file):
+    _ensure_size_ok(file)
+    try:
+        audio_path = _extract_audio_to_tmp(file, ext=".mp3")
+        with open(audio_path, "rb") as fh:
+            resp = client.audio.transcriptions.create(model=OPENAI_TRANSCRIBE_MODEL, file=fh)
+        text = getattr(resp, "text", None) or (resp.get("text") if isinstance(resp, dict) else None)
+        if not text:
+            raise RuntimeError("Empty transcription")
+        return text.strip()
+    except Exception as exc:
+        msg = str(exc)
+        if "Connection refused" in msg or "APIConnectionError" in msg:
+            raise HTTPException(status_code=502, detail=f"Transcription backend not reachable at {OPENAI_BASE_URL}")
+        if "401" in msg or "Unauthorized" in msg:
+            raise HTTPException(status_code=401, detail="Invalid or missing OPENAI_API_KEY")
+        if "429" in msg or "Rate limit" in msg:
+            raise HTTPException(status_code=429, detail="Transcription rate limited; please retry")
+        logger.exception("Transcription failed")
+        raise HTTPException(status_code=500, detail="Transcription failed")
+
+
+def extract_text_with_ocr(pdf_data: bytes, max_pages: int = 100, dpi: int = 200) -> str:
+    """Extract text from a PDF using OCR in Spanish.
+
+    Processes the document page by page to reduce memory usage.  The DPI is
+    lowered for faster processing and a maximum number of pages can be set to
+    avoid huge workloads.
+    """
+    info = pdfinfo_from_bytes(pdf_data)
+    total_pages = info.get("Pages", 0)
+    pages = min(total_pages, max_pages)
+    text = ""
+    for page_num in range(1, pages + 1):
+        logger.info("OCR page %s/%s", page_num, pages)
+        images = convert_from_bytes(
+            pdf_data, first_page=page_num, last_page=page_num, dpi=dpi
+        )
+        text += pytesseract.image_to_string(images[0], lang="spa")
+    if total_pages > max_pages:
+        logger.info("OCR truncated at %s pages (limit)", max_pages)
+    return text
+
+
+def extract_text_from_pdf(pdf_data: bytes, max_pages: int = 100) -> str:
+    """Try basic extraction, fall back to OCR if needed."""
+    text = ""
+    try:
+        doc = fitz.open(stream=BytesIO(pdf_data), filetype="pdf")
+        text = "".join(page.get_text() for page in doc)
+        doc.close()
+    except Exception as e:
+        logger.exception("Error reading PDF: %s", e)
+    logger.info("Extracted text length: %s", len(text))
+    if not text.strip():
+        logger.info("PDF contains no extractable text, applying OCR")
+        try:
+            text = extract_text_with_ocr(pdf_data, max_pages=max_pages)
+            logger.info("OCR extracted text length: %s", len(text))
+        except Exception as e:
+            logger.exception("OCR extraction failed: %s", e)
+            text = ""
+    return text
+
+
+
+def generate_course(file: UploadFile = File(...)):
+    """Extract text from an uploaded file and generate a course."""
+    filename = (file.filename or '').lower()
+    content_type = (file.content_type or '').lower()
+
+    # Read the uploaded file contents without pre-emptive rejection so that
+    # we can attempt chunking even for large uploads.
+    data = file.file.read()
+    size = len(data)
+    logger.info("Processing file '%s' (%d bytes)", filename, size)
+    if size > MAX_MEDIA_BYTES:
+        logger.warning(
+            "File exceeds MAX_MEDIA_BYTES=%s; proceeding with chunking", MAX_MEDIA_BYTES
+        )
+
+    # Handle plain text files
+    if filename.endswith('.txt') and 'text/plain' in content_type:
+        try:
+            try:
+                contents = data.decode('utf-8')
+            except UnicodeDecodeError:
+                try:
+                    contents = data.decode('latin-1')
+                except UnicodeDecodeError:
+                    contents = data.decode('utf-8', errors='ignore')
+        except Exception as e:
+            logger.exception("Error decoding text: %s", e)
+            raise HTTPException(status_code=422, detail="Error decoding text")
+
+    # Handle PDF files
+    elif filename.endswith('.pdf') and 'pdf' in content_type:
+        try:
+            contents = extract_text_from_pdf(data)
+        except Exception as e:
+            logger.exception("Error reading PDF: %s", e)
+            raise HTTPException(status_code=422, detail="Error reading PDF")
+    else:
+        raise HTTPException(status_code=400, detail="Only .txt or .pdf files are supported")
+
+    # Ensure the content stays within the model's limits
+    token_count = estimate_tokens(contents)
+    truncated = False
+    if token_count > MAX_MODEL_TOKENS:
+        contents = truncate_text_to_tokens(contents, MAX_MODEL_TOKENS)
+        truncated = True
+        token_count = estimate_tokens(contents)
+
+    # Split the input into manageable chunks for the LLM
+    try:
+        chunks = split_text_into_chunks(contents, max_tokens=10_000)
+    except ValueError as exc:
+        logger.error("Unable to split text: %s", exc)
+        raise HTTPException(status_code=400, detail="File too large to process")
+
+    partial_summaries = []  # Store each chunk summary
+    for chunk in chunks:
+        prompt = (
+            "Summarize the following part of a course document:\n\n" + chunk
+        )
+        partial_summaries.append(ask_llm(prompt))
+
+    # Combine partial summaries and ask for a final overall summary
+    aggregated = "\n".join(partial_summaries)
+    final_prompt = (
+        "Combine these summaries into a coherent course outline:\n\n" + aggregated
+    )
+    final_summary = ask_llm(final_prompt)
+    # Include a warning if we had to cut off the input text
+    result = {"course": final_summary}
+    if truncated:
+        result["warning"] = "Input text truncated to fit token limit."
+    return result
