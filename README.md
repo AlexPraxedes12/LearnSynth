@@ -10,12 +10,32 @@ Cross-platform **Flutter** app (Android · Web · Windows) with a **FastAPI** ba
 - **Works today:** Android · Web · Windows. (iOS/macOS templates exist, not part of this submission.)
 - **OSS-first:** default model is **gpt-oss-20b** via an **OpenAI-compatible** endpoint. **Offline LLM** code exists but is **feature-flagged and OFF by default**.
 
-**Website:** https://learnsynth.com
+<p align="center">
+  <a href="https://learnsynth.com">
+    <img alt="Website" src="https://img.shields.io/badge/Website-learnsynth.com-6C63FF?style=for-the-badge&logo=google-chrome&logoColor=white">
+  </a>
+  <a href="https://youtu.be/tUp1egYCSEA">
+    <img alt="Demo Video" src="https://img.shields.io/badge/Demo%20Video-YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white">
+  </a>
+  <a href="https://github.com/AlexPraxedes12/LearnSynth/releases/tag/v0.3.0">
+    <img alt="Release v0.3.0" src="https://img.shields.io/badge/Release-v0.3.0-24292e?style=for-the-badge&logo=github&logoColor=white">
+  </a>
+</p>
 
-[⬇️ Download](https://github.com/AlexPraxedes12/LearnSynth/releases/tag/v0.3.0)
-[📱 APK](https://github.com/AlexPraxedes12/LearnSynth/releases/tag/v0.3.0)
-[🎬 Demo video](https://youtu.be/tUp1egYCSEA)
-[🌐 Web app](https://learnsynth.com)
+<p align="center">
+  <!-- APK (siempre al último release) -->
+  <a href="https://github.com/AlexPraxedes12/LearnSynth/releases/latest/download/app-release.apk">
+    <img alt="APK" src="https://img.shields.io/badge/Download-APK-3DDC84?style=for-the-badge&logo=android&logoColor=white">
+  </a>
+  <!-- APK directo a v0.3.0 (opcional) -->
+  <a href="https://github.com/AlexPraxedes12/LearnSynth/releases/download/v0.3.0/app-release.apk">
+    <img alt="APK v0.3.0" src="https://img.shields.io/badge/Direct-APK%20(v0.3.0)-34A853?style=for-the-badge&logo=android&logoColor=white">
+  </a>
+  <!-- Setup de Windows (ajusta el nombre si cambias la versión/archivo) -->
+  <a href="https://github.com/AlexPraxedes12/LearnSynth/releases/download/v0.3.0/LearnSynth-Setup-1.0.0.exe">
+    <img alt="Windows Setup" src="https://img.shields.io/badge/Windows-Setup-0078D6?style=for-the-badge&logo=windows&logoColor=white">
+  </a>
+</p>
 
 ---
 
