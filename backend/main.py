@@ -23,16 +23,22 @@ except Exception:  # pragma: no cover - fallback when app is a stub
     assert spec.loader is not None
     spec.loader.exec_module(_config)
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
+logger = logging.getLogger("learnsynth")
+
 token = os.getenv("REPLICATE_API_TOKEN")
 key = os.getenv("REPLICATE_API_KEY")
-if os.getenv("DEBUG_ENV_VARS") == "1":
-    logger.debug("REPLICATE_API_TOKEN=%s", token)
-    logger.debug("REPLICATE_API_KEY=%s", key)
-else:
-    logger.info("REPLICATE_API_TOKEN is %s", "set" if token else "missing")
-    logger.info("REPLICATE_API_KEY is %s", "set" if key else "missing")
+
+# Solo para DEBUG y siempre enmascarado
+if os.getenv("DEBUG_LOG_TOKENS") == "1":
+    def _mask(v: str, p=4, s=2):
+        return "(unset)" if not v else f"{v[:p]}…{v[-s:]}"
+    logger.debug("REPLICATE_API_TOKEN=%s", _mask(token))
+    logger.debug("REPLICATE_API_KEY=%s", _mask(key))
+
+# Info seguro: solo presencia (nunca valores)
+logger.info("REPLICATE_API_TOKEN is %s", "set" if token else "missing")
+logger.info("REPLICATE_API_KEY is %s", "set" if key else "missing")
 from fastapi.responses import FileResponse
 from app.middleware.normalize_json import normalize_json_middleware
 
