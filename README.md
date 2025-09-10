@@ -1,99 +1,123 @@
 # LearnSynth
 
-## Overview
+> **Turn any text / PDF / audio / video into an offline-ready study pack** — summaries, concept maps, quizzes and reflective prompts.  
+Cross-platform **Flutter** app (Android · Web · Windows) with a **FastAPI** backend orchestrating open-source LLMs + transcription/OCR.
 
-LearnSynth turns raw text, audio or video into a structured study pack.  The
-Flutter front‑end lets learners upload material and review generated quizzes,
-concept maps and reflective prompts.  The FastAPI backend orchestrates LLMs and
-transcription services to build these study aids.
+---
+
+## TL;DR (for judges)
+- **Real use case:** convert long content into actionable study material you can keep **offline**.
+- **Works today:** Android · Web · Windows. (iOS/macOS templates exist, not part of this submission.)
+- **OSS-first:** default model is **gpt-oss-20b** via an **OpenAI-compatible** endpoint. **Offline LLM** code exists but is **feature-flagged and OFF by default**.
+
+**Website:** https://learnsynth.com
+
+[⬇️ Download](https://github.com/AlexPraxedes12/LearnSynth/releases/tag/v0.3.0)
+[📱 APK](https://github.com/AlexPraxedes12/LearnSynth/releases/tag/v0.3.0)
+[🎬 Demo video](https://youtu.be/tUp1egYCSEA)
+[🌐 Web app](https://learnsynth.com)
+
+---
+
+## Screenshots
+<p>
+  <img src="docs/Add.jpg" alt="Add content screen" width="30%"/>
+  <img src="docs/Library.jpg" alt="Library screen" width="30%"/>
+  <img src="docs/Progress.jpg" alt="Progress screen" width="30%"/>
+</p>
+
+---
+
+## What it does
+- **Ingest** text, PDFs, audio or video.
+- **Transcribe** audio/video (OpenAI Whisper) and **extract/OCR** PDFs (PyMuPDF + Tesseract).
+- **Generate** study packs with an **OpenAI-compatible** LLM (default **gpt-oss-20b**):
+  - Summary (TL;DR)
+  - Concept map (nodes + relations)
+  - Deep-understanding prompts
+  - Quizzes, cloze drills and flashcards (simple SRS)
+- **Export** to Markdown/TXT/PDF and optional **TTS (MP3)**.
+- **Store** locally for continued study **without internet**.
+
+---
 
 ## Architecture
-
 ```
-Flutter UI → FastAPI backend → LLM provider
-                              ↳ OSS (vLLM/Ollama) or SaaS fallback
+Flutter UI ──► FastAPI backend
+                 ├─ Transcription (Whisper)
+                 ├─ PDF + OCR (PyMuPDF + Tesseract)
+                 └─ LLM layer (OpenAI-compatible) → gpt-oss-20b / Replicate / vLLM / Ollama
+                                 └─ Generators → summary · concept map · prompts · quizzes · cloze · flashcards
 ```
+The LLM provider is selected at runtime via environment variables, with optional fallbacks.
 
-The backend selects the LLM at runtime via environment variables.  When
-`LLM_PROVIDER=oss` the server first tries an OpenAI compatible `/v1`
-endpoint (vLLM or Ollama) and falls back to the native Ollama API if needed.
-`LLM_FALLBACK_PROVIDER` can point to `openai` or `anthropic` for hosted models.
+---
 
-## Quick Start – Local (Docker Compose)
+## Quick start
 
-Run the backend and local Ollama service from the `backend` directory:
-
+### Backend (local)
 ```bash
 cd backend
-cp .env.example .env
+cp .env.example .env   # fill in values; never commit real secrets
+pip install -r requirements.txt
+uvicorn main:app --host 0.0.0.0 --port 8000
+```
+Or with Docker:
+```bash
+cd backend
 docker compose up --build
 ```
 
-Verify connectivity from inside the backend container and hit the API:
-
+### Frontend (Flutter)
 ```bash
-cd backend
-docker compose exec backend sh -lc "apk add --no-cache curl >/dev/null 2>&1 || true; curl -s http://llm:11434/v1/models"
-curl -X POST http://localhost:8000/analyze -H "Content-Type: application/json" -d '{"text":"Short sample"}'
+cd frontend/learns
+
+# Web
+flutter build web --release
+
+# Windows
+flutter build windows --release
+
+# Android
+flutter build apk --release
 ```
 
-## Quick Start – Cloud
+**Configuration & security**
+- **API_BASE**: production builds default to your hosted API (e.g., `https://learnsynth-api.fly.dev`).  
+  To override:
+  ```bash
+  flutter build <target> --release --dart-define=API_BASE=https://your-backend
+  ```
+- **ENABLE_OFFLINE_LLM**: feature-flagged and **false by default**.  
+  Only for local testing:
+  ```bash
+  flutter run --dart-define=ENABLE_OFFLINE_LLM=true
+  ```
+- **Secrets**: `.env` is git-ignored; `.env.example` uses placeholders. Logs never print raw tokens — only presence.
 
-Deploy the backend container to Cloud Run, Railway or Render.  For Cloud Run:
+---
 
-```bash
-gcloud run services replace cloudrun.yaml
-```
+## Tech stack
+**Frontend (Flutter/Dart)** — provider, shared_preferences, hive, file_picker. Targets: Android · Web · Windows.  
+**Backend (Python/FastAPI)** — uvicorn, httpx, sse-starlette. PDF: PyMuPDF + pdf2image + Tesseract (OCR). STT: Whisper (OpenAI).  
+**LLM** — OpenAI-compatible endpoint (default **gpt-oss-20b**), optional OpenAI / Anthropic / Replicate or local vLLM/Ollama.  
+**Infra** — Docker / Docker Compose; deployable to Cloud Run / Railway / Render.  
+**Storage** — client-side (no server DB).
 
-Replace `PROJECT_ID` and `YOUR-LLM-ENDPOINT` in the manifest with your
-project and LLM URL.
+---
 
-## Environment variables
+## One-minute review path
+1. Open the app (Web/Windows/Android).
+2. **Add content** → paste a short paragraph or upload a small PDF.
+3. Tap **Analyze** and watch summary, concept map and a quiz appear.
+4. Try **Study methods** (Memorization / Deep Understanding / Quiz).
+5. **Export** as Markdown/PDF or **Speak** to MP3.
 
-These are read by the backend and Docker images:
+---
 
-| Name | Purpose |
-| --- | --- |
-| `LLM_PROVIDER` | Primary provider (`oss`, `openai`, `anthropic`) |
-| `LLM_FALLBACK_PROVIDER` | Secondary provider if the primary fails |
-| `LLM_TIMEOUT_SEC` | HTTP timeout for LLM calls |
-| `OSS_API_BASE` | Base URL for OpenAI-compatible OSS endpoint |
-| `OSS_MODEL` | Model name for the OSS `/v1` endpoint |
-| `OLLAMA_BASE` | Base URL for Ollama native API |
-| `OLLAMA_MODEL` | Model name for Ollama |
-| `OPENAI_API_KEY` | API key for OpenAI fallback |
-| `ANTHROPIC_API_KEY` | API key for Anthropic fallback |
-| `FLASHCARD_TARGET`, `QUIZ_TARGET`, `DEEP_TARGET`, `CLOZE_TARGET` | Optional item count hints |
+## License
+MIT (see `LICENSE`). Third-party models/libraries are under their own licenses.
 
-No secret values are committed; inject them via your environment or cloud
-secret manager.
-
-## Testing
-
-Run the backend locally and hit the analysis endpoint:
-
-```bash
-curl -s localhost:8000/analyze -H 'Content-Type: application/json' \
-  -d '{"text":"short example"}' | jq
-```
-
-The response always contains `summary`, `deep_prompts`, `concept_map`, `quiz`
-and `errors` keys.
-
-## Flutter: switching LLM backends
-
-The Flutter app can route text generation either to a local model or to
-Replicate. Open the **Ajustes** screen, enter a Replicate API token or a local
-model path, and tap **Usar Replicate** or **Usar local** to switch between
-backends.
-
-## Security & Privacy
-
-API keys are loaded from environment variables or secret managers at runtime;
-they are never checked into the repository.  When using OSS models all
-processing can stay on local hardware.
-
-## License & Attribution
 
 This project is released under the MIT License (see `LICENSE`).  Model weights
 belong to their respective authors (e.g. Meta for Llama‑3.1).  Spacy and other
