@@ -8,6 +8,7 @@ from fastapi import (
     Request,
 )
 import os
+import logging
 from pathlib import Path
 
 # Ensure environment variables are loaded before using LLM utilities
@@ -22,10 +23,16 @@ except Exception:  # pragma: no cover - fallback when app is a stub
     assert spec.loader is not None
     spec.loader.exec_module(_config)
 
-print("=== DEBUG ENV VARS ===")
-print(f"REPLICATE_API_TOKEN: {os.getenv('REPLICATE_API_TOKEN')}")
-print(f"REPLICATE_API_KEY: {os.getenv('REPLICATE_API_KEY')}")
-print("======================")
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+token = os.getenv("REPLICATE_API_TOKEN")
+key = os.getenv("REPLICATE_API_KEY")
+if os.getenv("DEBUG_ENV_VARS") == "1":
+    logger.debug("REPLICATE_API_TOKEN=%s", token)
+    logger.debug("REPLICATE_API_KEY=%s", key)
+else:
+    logger.info("REPLICATE_API_TOKEN is %s", "set" if token else "missing")
+    logger.info("REPLICATE_API_KEY is %s", "set" if key else "missing")
 from fastapi.responses import FileResponse
 from app.middleware.normalize_json import normalize_json_middleware
 
@@ -38,8 +45,6 @@ except Exception:  # pragma: no cover - fallback for tests
             super().__init__(content=content, status_code=status_code)
 
 
-import os
-import logging
 import asyncio
 import json
 from fastapi.middleware.cors import CORSMiddleware
@@ -80,8 +85,6 @@ except Exception:  # pragma: no cover - test stubs may omit
 from app.models import ReviewInput, ExportInput
 from services import llm_service
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 logger.info("FLASHCARD_TARGET=%s", os.getenv("FLASHCARD_TARGET"))
 logger.info("QUIZ_TARGET=%s", os.getenv("QUIZ_TARGET"))
 MAX_MEDIA_BYTES = int(
