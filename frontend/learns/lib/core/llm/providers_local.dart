@@ -1,5 +1,6 @@
 import 'package:learnsynth/services/offline_llm_compat.dart';
 import 'llm_router.dart';
+import '../../config/env.dart';
 
 class LocalOfflineLLMProvider implements LLMProvider {
   @override
@@ -8,6 +9,9 @@ class LocalOfflineLLMProvider implements LLMProvider {
   @override
   Stream<String> stream(String prompt,
       {int maxTokens = 256, double temperature = .2}) async* {
+    if (!Env.enableOfflineLLM) {
+      throw UnsupportedError('Offline LLM disabled');
+    }
     if (!OfflineLLM.instance.isReady) {
       await OfflineLLM.instance.init();
     }

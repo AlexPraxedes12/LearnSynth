@@ -2,6 +2,7 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:learnsynth_offline_llm/learnsynth_offline_llm.dart'
     if (dart.library.html) 'package:learnsynth/stub_web.dart';
+import '../../config/env.dart';
 
 abstract class LlmBackend {
   Future<void> init();
@@ -16,7 +17,8 @@ class LocalBackend implements LlmBackend {
   final String modelPath;
   final LearnsynthOfflineLlm _plugin;
 
-  bool get _supported => !kIsWeb && (Platform.isAndroid || Platform.isWindows);
+  bool get _supported =>
+      Env.enableOfflineLLM && !kIsWeb && (Platform.isAndroid || Platform.isWindows);
 
   @override
   Future<void> init() async {

@@ -25,6 +25,7 @@ import 'package:provider/provider.dart';
 import 'providers/settings_provider.dart';
 import 'package:learnsynth/services/offline_llm_compat.dart';
 import 'core/course_name_generator.dart';
+import 'config/env.dart';
 
 /// ----- New typed models -----
 class RunInfo {
@@ -211,7 +212,9 @@ class ContentProvider extends ChangeNotifier {
 
   Future<void> _ensureProviders() async {
     _heu ??= HeuristicOfflineLLMProvider();
-    _pLocal ??= LocalOfflineLLMProvider();
+    if (Env.enableOfflineLLM) {
+      _pLocal ??= LocalOfflineLLMProvider();
+    }
     _pBack ??= BackendLLMProvider(ApiConfig.apiBase);
   }
 
@@ -639,6 +642,7 @@ class ContentProvider extends ChangeNotifier {
   }
 
   Future<void> _runOfflineAnalysis(String text) async {
+    if (!Env.enableOfflineLLM) return;
     final provider = _pLocal!;
     _conceptGroups = [];
     _conceptTopics = [];
@@ -916,7 +920,7 @@ class ContentProvider extends ChangeNotifier {
       LLMProvider provider, String text, BuildContext context) async {
     if (provider.id == 'backend') {
       await _runBackendAnalysis(text, context);
-    } else if (provider.id == 'offline') {
+    } else if (provider.id == 'offline' && Env.enableOfflineLLM) {
       await _runOfflineAnalysis(text);
     } else {
       await _runHeuristicAnalysis(text);
@@ -961,18 +965,19 @@ class ContentProvider extends ChangeNotifier {
 
       await _ensureProviders();
       final settings = context.read<SettingsProvider>();
-      final offlinePref = settings.enableOfflineLLM;
+      final offlinePref = Env.enableOfflineLLM && settings.enableOfflineLLM;
       final net = await hasInternet();
 
       LLMProvider primary;
       if (offlinePref) {
-        final ready = OfflineLLM.instance.isReady;
+        final ready = Env.enableOfflineLLM && OfflineLLM.instance.isReady;
         primary = ready ? _pLocal! : _heu!;
       } else {
         if (net) {
           primary = _pBack!;
         } else {
-          final ready = OfflineLLM.instance.isReady;
+          final ready =
+              Env.enableOfflineLLM && OfflineLLM.instance.isReady;
           primary = ready ? _pLocal! : _heu!;
         }
       }
@@ -993,7 +998,11 @@ class ContentProvider extends ChangeNotifier {
 
         final chain = <LLMProvider>[];
         if (primary != _pBack && net) chain.add(_pBack!);
-        if (primary != _pLocal && OfflineLLM.instance.isReady) chain.add(_pLocal!);
+        if (primary != _pLocal &&
+            Env.enableOfflineLLM &&
+            OfflineLLM.instance.isReady) {
+          chain.add(_pLocal!);
+        }
         if (primary != _heu) chain.add(_heu!);
 
         for (final alt in chain) {

@@ -14,3 +14,24 @@ A few resources to get you started if this is your first Flutter project:
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
+
+## Build
+
+```bash
+# Online-only builds (public submission)
+flutter build web --release \
+  --dart-define=API_BASE=https://your-api.fly.dev \
+  --dart-define=ENABLE_OFFLINE_LLM=false
+
+flutter build windows --release ^
+  --dart-define=API_BASE=https://your-api.fly.dev ^
+  --dart-define=ENABLE_OFFLINE_LLM=false
+
+flutter build apk --release \
+  --dart-define=API_BASE=https://your-api.fly.dev \
+  --dart-define=ENABLE_OFFLINE_LLM=false
+
+# To test the offline path locally:
+flutter run --dart-define=API_BASE=http://localhost:8000 \
+            --dart-define=ENABLE_OFFLINE_LLM=true
+```

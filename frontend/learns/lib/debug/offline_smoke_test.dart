@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:learnsynth/services/offline_llm_compat.dart';
+import '../config/env.dart';
 
 class OfflineSmokeTest extends StatefulWidget {
   const OfflineSmokeTest({super.key});
@@ -13,7 +14,7 @@ class _OfflineSmokeTestState extends State<OfflineSmokeTest> {
   @override
   void initState() {
     super.initState();
-    if (!kDebugMode) return;
+    if (!kDebugMode || !Env.enableOfflineLLM) return;
     () async {
       await OfflineLLM.instance.init();
       final ready = OfflineLLM.instance.isReady;
@@ -27,6 +28,11 @@ class _OfflineSmokeTestState extends State<OfflineSmokeTest> {
 
   @override
   Widget build(BuildContext context) {
+    if (!Env.enableOfflineLLM) {
+      return const Scaffold(
+        body: Center(child: Text('Offline LLM disabled')),
+      );
+    }
     return Scaffold(
       appBar: AppBar(title: const Text('Offline LLM smoke test')),
       body: Padding(

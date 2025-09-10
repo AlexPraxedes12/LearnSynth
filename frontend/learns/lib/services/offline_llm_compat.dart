@@ -3,6 +3,7 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:learnsynth_offline_llm/learnsynth_offline_llm.dart'
     if (dart.library.html) 'package:learnsynth/stub_web.dart';
+import '../config/env.dart';
 
 /// Wrapper de compatibilidad para código legado que usa OfflineLLM con:
 /// - init(String modelPath)
@@ -26,7 +27,8 @@ class OfflineLLM {
 
   /// Antes: init(modelPath) -> ahora delega a loadModel() usando un [modelId].
   /// El parámetro es opcional para ocultar detalles de rutas al resto de la app.
-  bool get _supported => !kIsWeb && (Platform.isAndroid || Platform.isWindows);
+  bool get _supported =>
+      Env.enableOfflineLLM && !kIsWeb && (Platform.isAndroid || Platform.isWindows);
 
   Future<bool> init([String modelId = _defaultModelId]) async {
     if (!_supported) return false;
@@ -47,7 +49,8 @@ class OfflineLLM {
 
   /// Stream de compat: emite todo el texto en un solo chunk.
   /// Si tu UI esperaba tokens sueltos, usa asTokens:true para dividir por espacios.
-  Stream<String> stream(String prompt, {int maxTokens = 64, bool asTokens = false}) async* {
+  Stream<String> stream(String prompt,
+      {int maxTokens = 64, bool asTokens = false}) async* {
     final text = await generate(prompt, maxTokens: maxTokens);
     if (asTokens) {
       final re = RegExp(r'\s+');

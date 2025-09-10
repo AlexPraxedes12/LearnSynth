@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/net/api_config.dart';
+import '../config/env.dart';
 
 class SettingsProvider extends ChangeNotifier {
   static const _themeKey = 'themeMode';
@@ -23,7 +24,7 @@ class SettingsProvider extends ChangeNotifier {
 
   ThemeMode get themeMode => _themeMode;
   Locale get locale => _locale;
-  bool get enableOfflineLLM => _enableOfflineLLM;
+  bool get enableOfflineLLM => Env.enableOfflineLLM && _enableOfflineLLM;
   Duration get backendTimeout => _backendTimeout;
 
   Future<void> _load() async {
@@ -39,7 +40,11 @@ class SettingsProvider extends ChangeNotifier {
     if (localeStr != null) {
       _locale = Locale(localeStr);
     }
-    _enableOfflineLLM = _prefs!.getBool(_offlineKey) ?? false;
+    if (Env.enableOfflineLLM) {
+      _enableOfflineLLM = _prefs!.getBool(_offlineKey) ?? false;
+    } else {
+      _enableOfflineLLM = false;
+    }
     final timeoutSecs = _prefs!.getInt(_timeoutKey);
     if (timeoutSecs != null) {
       _backendTimeout = Duration(seconds: timeoutSecs);
@@ -60,6 +65,7 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   Future<void> setEnableOfflineLLM(bool value) async {
+    if (!Env.enableOfflineLLM) return;
     _enableOfflineLLM = value;
     await _prefs?.setBool(_offlineKey, value);
     notifyListeners();
@@ -72,6 +78,7 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   void setOfflineStatus(String s, {String? error}) {
+    if (!Env.enableOfflineLLM) return;
     offlineModelStatus = s;
     offlineError = error;
     notifyListeners();
