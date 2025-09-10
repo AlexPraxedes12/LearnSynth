@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../providers/settings_provider.dart';
 import 'package:learnsynth/services/offline_llm_compat.dart';
 import '../core/util/offline_model_support.dart';
+import '../config/env.dart';
 
 const String kOfflineModelId = OfflineLLM.defaultModelId;
 
@@ -38,16 +39,20 @@ class _OfflineSettingsSectionState extends State<OfflineSettingsSection> {
   @override
   void initState() {
     super.initState();
-    () async {
-      await OfflineLLM.instance.init(kOfflineModelId);
-      final ready = OfflineLLM.instance.isReady;
-      debugPrint('[OfflineLLM] modelId=$kOfflineModelId ready=$ready');
-    }();
+    if (Env.enableOfflineLLM) {
+      () async {
+        await OfflineLLM.instance.init(kOfflineModelId);
+        final ready = OfflineLLM.instance.isReady;
+        debugPrint('[OfflineLLM] modelId=$kOfflineModelId ready=$ready');
+      }();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!isOfflineModelSupported) return const SizedBox.shrink();
+    if (!Env.enableOfflineLLM || !isOfflineModelSupported) {
+      return const SizedBox.shrink();
+    }
     final settings = context.watch<SettingsProvider>();
     final status = settings.offlineModelStatus;
     final installed = status == 'ready';

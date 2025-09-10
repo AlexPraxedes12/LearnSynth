@@ -11,6 +11,7 @@ import '../core/llm/llm_router.dart';
 import '../core/llm/providers_local.dart';
 import '../core/llm/providers_backend.dart';
 import '../core/net/api_config.dart';
+import '../config/env.dart';
 
 class _RouterProvider implements LLMProvider {
   final LLMRouter router;
@@ -40,7 +41,7 @@ class AnalysisScreen extends StatelessWidget {
     final p = context.watch<ContentProvider>();
     final settings = context.watch<SettingsProvider>();
     final llmRouter = LLMRouter(
-      offlinePref: () => settings.enableOfflineLLM,
+      offlinePref: () => Env.enableOfflineLLM && settings.enableOfflineLLM,
       local: LocalOfflineLLMProvider(),
       backend: BackendLLMProvider(ApiConfig.apiBase),
     );
@@ -111,7 +112,7 @@ class AnalysisScreen extends StatelessWidget {
               onPressed:
                   hasCloze ? () => _navigateWithTimer(context, Routes.cloze) : null,
             ),
-            if (settings.enableOfflineLLM) ...[
+            if (Env.enableOfflineLLM && settings.enableOfflineLLM) ...[
               const SizedBox(height: 12),
               WideButton(
                 label: 'Resumen offline',

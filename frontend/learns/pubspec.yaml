@@ -101,6 +101,9 @@ flutter:
   # the material Icons class.
   uses-material-design: true
   generate: true
+  # Offline LLM assets are intentionally excluded from public builds.
+  # assets:
+  #   - packages/learnsynth_offline_llm/assets/models/
 
 flutter_launcher_icons:
   image_path: assets/logo.png

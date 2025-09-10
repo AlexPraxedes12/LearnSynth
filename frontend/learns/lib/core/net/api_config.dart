@@ -1,11 +1,12 @@
 // frontend/learns/lib/core/net/api_config.dart
 import 'package:flutter/foundation.dart'
     show kIsWeb, defaultTargetPlatform, TargetPlatform, kReleaseMode;
+import '../../config/env.dart';
 
 class ApiConfig {
   /// Base del backend para cada plataforma.
   static String get apiBase {
-    const envBase = String.fromEnvironment('API_BASE');
+    final envBase = Env.apiBase;
     if (envBase.isNotEmpty) return envBase;
     if (kReleaseMode) return 'https://learnsynth-api.fly.dev';
 
