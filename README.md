@@ -27,10 +27,7 @@ Cross-platform **Flutter** app (Android · Web · Windows) with a **FastAPI** ba
   <a href="https://github.com/AlexPraxedes12/LearnSynth/releases/latest/download/app-release.apk">
     <img alt="APK" src="https://img.shields.io/badge/Download-APK-3DDC84?style=for-the-badge&logo=android&logoColor=white">
   </a>
-  <!-- APK directo a v0.3.0 (opcional) -->
-  <a href="https://github.com/AlexPraxedes12/LearnSynth/releases/download/v0.3.0/app-release.apk">
-    <img alt="APK v0.3.0" src="https://img.shields.io/badge/Direct-APK%20(v0.3.0)-34A853?style=for-the-badge&logo=android&logoColor=white">
-  </a>
+  
   <!-- Setup de Windows (ajusta el nombre si cambias la versión/archivo) -->
   <a href="https://github.com/AlexPraxedes12/LearnSynth/releases/download/v0.3.0/LearnSynth-Setup-1.0.0.exe">
     <img alt="Windows Setup" src="https://img.shields.io/badge/Windows-Setup-0078D6?style=for-the-badge&logo=windows&logoColor=white">
