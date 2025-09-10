@@ -1,48 +1,35 @@
-__pycache__/
+﻿# Environment variables
 .env
-*.env
+.env.local
+.env.production
+.env*.local
+
+# Dependencies
 node_modules/
-dist/
-models/qwen25-1_5b-q4km/
-tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf
-# --- SO / IDE ---
+/.pnp
+.pnp.js
+
+# Testing
+/coverage
+
+# Production
+/build
+/dist
+
+# Misc
+.DS_Store
+*.pem
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE
 .vscode/
 .idea/
-*.iml
-.DS_Store
+*.swp
+*.swo
+
+# OS
 Thumbs.db
-*.log
-
-# --- Python ---
-__pycache__/
-*.py[cod]
-.venv/
-venv/
-env/
-*.egg-info/
-.pytest_cache/
-.mypy_cache/
-
-# --- Flutter / Android / iOS ---
-.dart_tool/
-.flutter-plugins
-.flutter-plugins-dependencies
-.packages
-.pub-cache/
-.pub/
-build/
-frontend/learns/build/
-frontend/learns/android/build/
-learnsynth_offline_llm/android/.cxx/
-android/.gradle/
-ios/Pods/
-
-# --- APKs / bins de build ---
-*.apk
-*.aab
-
-# --- Modelos / pesos pesados (Opción A: NO versionarlos) ---
-learnsynth_offline_llm/assets/models/*.gguf
-learnsynth_offline_llm/assets/models/*.bin
-learnsynth_offline_llm/assets/models/*.onnx
-learnsynth_offline_llm/assets/models/*.tflite
