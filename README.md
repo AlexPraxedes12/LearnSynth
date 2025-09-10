@@ -1,147 +1,188 @@
 # LearnSynth
 
-> **Turn any text / PDF / audio / video into an offline-ready study pack** — summaries, concept maps, quizzes and reflective prompts.  
-Cross-platform **Flutter** app (Android · Web · Windows) with a **FastAPI** backend orchestrating open-source LLMs + transcription/OCR.
+Turn **text, audio, or video** into ready‑to‑study material — summaries, concept maps, quizzes, cloze drills, flashcards, and TTS. Built with a **Flutter** client and a **FastAPI** backend that orchestrates LLMs, transcription, OCR and export.
+
+<p align="center">
+  <a href="https://github.com/AlexPraxedes12/LearnSynth/releases/tag/v0.3.0">
+    <img alt="Download" src="https://img.shields.io/badge/Download-Release-2ea44f?style=for-the-badge&logo=github">
+  </a>
+  <a href="https://github.com/AlexPraxedes12/LearnSynth/releases/tag/v0.3.0">
+    <img alt="APK" src="https://img.shields.io/badge/APK-Android-3DDC84?style=for-the-badge&logo=android">
+  </a>
+  <a href="https://youtu.be/tUp1egYCSEA">
+    <img alt="Demo video" src="https://img.shields.io/badge/Demo-YouTube-FF0000?style=for-the-badge&logo=youtube">
+  </a>
+  <a href="https://learnsynth.com">
+    <img alt="Website" src="https://img.shields.io/badge/Website-learnsynth.com-0a84ff?style=for-the-badge&logo=googlechrome">
+  </a>
+</p>
+
+<p align="center">
+  <img alt="Flutter" src="https://img.shields.io/badge/Flutter-02569B?style=flat&logo=flutter&logoColor=white">
+  <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-009688?style=flat&logo=fastapi&logoColor=white">
+  <img alt="Python" src="https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white">
+  <img alt="Dart" src="https://img.shields.io/badge/Dart-0175C2?style=flat&logo=dart&logoColor=white">
+  <img alt="Docker" src="https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white">
+</p>
 
 ---
 
-## TL;DR (for judges)
-- **Real use case:** convert long content into actionable study material you can keep **offline**.
-- **Works today:** Android · Web · Windows. (iOS/macOS templates exist, not part of this submission.)
-- **OSS-first:** default model is **gpt-oss-20b** via an **OpenAI-compatible** endpoint. **Offline LLM** code exists but is **feature-flagged and OFF by default**.
+## TL;DR for judges
 
-<p align="center">
-  <a href="https://learnsynth.com">
-    <img alt="Website" src="https://img.shields.io/badge/Website-learnsynth.com-6C63FF?style=for-the-badge&logo=google-chrome&logoColor=white">
-  </a>
-  <a href="https://youtu.be/tUp1egYCSEA">
-    <img alt="Demo Video" src="https://img.shields.io/badge/Demo%20Video-YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white">
-  </a>
-  <a href="https://github.com/AlexPraxedes12/LearnSynth/releases/tag/v0.3.0">
-    <img alt="Release v0.3.0" src="https://img.shields.io/badge/Release-v0.3.0-24292e?style=for-the-badge&logo=github&logoColor=white">
-  </a>
-</p>
+- **Try it on the web:** <https://learnsynth.com>  
+- **Android:** download the **APK** from the [v0.3.0 release](https://github.com/AlexPraxedes12/LearnSynth/releases/tag/v0.3.0) and install (enable *Install unknown apps*).
+- **Windows:** download the Windows installer/zip from the same release and run (if SmartScreen appears: *More info → Run anyway*).
+- **Demo video (3 min):** <https://youtu.be/tUp1egYCSEA>
 
-<p align="center">
-  <!-- APK (siempre al último release) -->
-  <a href="https://github.com/AlexPraxedes12/LearnSynth/releases/latest/download/app-release.apk">
-    <img alt="APK" src="https://img.shields.io/badge/Download-APK-3DDC84?style=for-the-badge&logo=android&logoColor=white">
-  </a>
-  
-  <!-- Setup de Windows (ajusta el nombre si cambias la versión/archivo) -->
-  <a href="https://github.com/AlexPraxedes12/LearnSynth/releases/download/v0.3.0/LearnSynth-Setup-1.0.0.exe">
-    <img alt="Windows Setup" src="https://img.shields.io/badge/Windows-Setup-0078D6?style=for-the-badge&logo=windows&logoColor=white">
-  </a>
-</p>
+---
+
+## How it uses **GPT‑OSS‑20B** (OpenAI open model)
+
+LearnSynth was designed to operate with open models. For this hackathon the app prioritizes **gpt‑oss‑20b** (the OpenAI open source LLM) for the generation steps (summaries, flashcards, cloze, concept map descriptors). The backend routes requests to an **OpenAI‑compatible endpoint** and supports provider swapping, so gpt‑oss‑20b can run via a hosted inference endpoint or a local/OSS stack. Other providers can be enabled as fallbacks when needed.
+
+- Primary open model: **gpt‑oss‑20b**
+- Compatible wiring: OpenAI‑style `/v1/chat/completions` (streaming) exposed as `/llm/generate` to the client.
+- Fallbacks (optional): other open‑weights or SaaS providers when configured via env vars.
+
+---
+
+## Features
+
+- **One‑click study pack** from text, PDF, audio or video
+- **Summaries & deep prompts** for reflection
+- **Concept map** data and image export
+- **Quizzes & cloze drills** with quick validation
+- **Flashcards + simple SRS** progression
+- **Whisper** transcription (for AV input)
+- **OCR** (PyMuPDF + Tesseract) for scanned PDFs
+- **Text‑to‑speech** (gTTS) for narration
+- **Exports** to Markdown / TXT / PDF
 
 ---
 
 ## Screenshots
-<p>
-  <img src="docs/Add.jpg" alt="Add content screen" width="30%"/>
-  <img src="docs/Library.jpg" alt="Library screen" width="30%"/>
-  <img src="docs/Progress.jpg" alt="Progress screen" width="30%"/>
+
+<p align="center">
+  <img src="docs/Add.jpg" alt="Add content" width="27%">
+  <img src="docs/Library.jpg" alt="Library" width="27%">
+  <img src="docs/Progress.jpg" alt="Progress" width="27%">
 </p>
 
 ---
 
-## What it does
-- **Ingest** text, PDFs, audio or video.
-- **Transcribe** audio/video (OpenAI Whisper) and **extract/OCR** PDFs (PyMuPDF + Tesseract).
-- **Generate** study packs with an **OpenAI-compatible** LLM (default **gpt-oss-20b**):
-  - Summary (TL;DR)
-  - Concept map (nodes + relations)
-  - Deep-understanding prompts
-  - Quizzes, cloze drills and flashcards (simple SRS)
-- **Export** to Markdown/TXT/PDF and optional **TTS (MP3)**.
-- **Store** locally for continued study **without internet**.
+## Architecture (high level)
+
+```
+Flutter (Android / Windows / Web)
+        │
+        ▼
+ FastAPI backend  ──► /upload-content  (ingest: text/pdf/audio/video → text)
+        │           └► /analyze        (summaries, map, prompts, quiz, flashcards)
+        │           └► /llm/generate   (streaming, OpenAI‑compatible)
+        │
+        ├─ Transcription: Whisper
+        ├─ PDF + OCR: PyMuPDF, pdf2image, Tesseract
+        ├─ TTS: gTTS
+        └─ LLM providers: **gpt‑oss‑20b** (primary), fallbacks via env
+```
 
 ---
 
-## Architecture
+## Build & run (client)
+
+The app reads two compile‑time flags:
+
+- `API_BASE` – backend URL (defaults to a production value in release builds; override if yours differs)
+- `ENABLE_OFFLINE_LLM` – feature flag for local/offline models (defaults to **false**)
+
+### Web (release)
+
+```bash
+flutter build web --release   --dart-define=API_BASE=https://learnsynth-api.fly.dev   --dart-define=ENABLE_OFFLINE_LLM=false
 ```
-Flutter UI ──► FastAPI backend
-                 ├─ Transcription (Whisper)
-                 ├─ PDF + OCR (PyMuPDF + Tesseract)
-                 └─ LLM layer (OpenAI-compatible) → gpt-oss-20b / Replicate / vLLM / Ollama
-                                 └─ Generators → summary · concept map · prompts · quizzes · cloze · flashcards
+
+### Windows (release)
+
+```bash
+flutter build windows --release   --dart-define=API_BASE=https://learnsynth-api.fly.dev   --dart-define=ENABLE_OFFLINE_LLM=false
 ```
-The LLM provider is selected at runtime via environment variables, with optional fallbacks.
+
+### Android (APK)
+
+```bash
+flutter build apk --release   --dart-define=API_BASE=https://learnsynth-api.fly.dev   --dart-define=ENABLE_OFFLINE_LLM=false
+```
+
+### Local testing (enable offline path)
+
+```bash
+flutter run   --dart-define=API_BASE=http://localhost:8000   --dart-define=ENABLE_OFFLINE_LLM=true
+```
+
+> If you don’t pass `API_BASE`, the app will use the compiled default. Only set `ENABLE_OFFLINE_LLM=true` if you also provide a local model path and platform support.
 
 ---
 
-## Quick start
+## Backend (FastAPI)
 
-### Backend (local)
+### Quick start (Docker Compose)
+
 ```bash
 cd backend
-cp .env.example .env   # fill in values; never commit real secrets
-pip install -r requirements.txt
-uvicorn main:app --host 0.0.0.0 --port 8000
-```
-Or with Docker:
-```bash
-cd backend
+cp .env.example .env
 docker compose up --build
 ```
 
-### Frontend (Flutter)
-```bash
-cd frontend/learns
+Endpoints (selected):
+- `POST /upload-content` – ingest text, PDF, audio, or video
+- `POST /analyze` – build the study pack in parallel (summary, map, prompts, quiz, flashcards)
+- `POST /llm/generate` – streaming OpenAI‑compatible completions for the UI
+- `POST /speak` – text‑to‑speech (MP3)
+- `POST /export` – export Markdown → TXT/PDF
 
-# Web
-flutter build web --release
-
-# Windows
-flutter build windows --release
-
-# Android
-flutter build apk --release
+Environment variables (excerpt):
+```
+LLM_PROVIDER=oss
+LLM_FALLBACK_PROVIDER=
+OSS_API_BASE=...     # OpenAI‑compatible endpoint for gpt‑oss‑20b
+OSS_MODEL=gpt-oss-20b
+OPENAI_API_KEY=...
+ANTHROPIC_API_KEY=...
+MAX_MEDIA_BYTES=104857600
 ```
 
-**Configuration & security**
-- **API_BASE**: production builds default to your hosted API (e.g., `https://learnsynth-api.fly.dev`).  
-  To override:
-  ```bash
-  flutter build <target> --release --dart-define=API_BASE=https://your-backend
-  ```
-- **ENABLE_OFFLINE_LLM**: feature-flagged and **false by default**.  
-  Only for local testing:
-  ```bash
-  flutter run --dart-define=ENABLE_OFFLINE_LLM=true
-  ```
-- **Secrets**: `.env` is git-ignored; `.env.example` uses placeholders. Logs never print raw tokens — only presence.
+> **Security:** never commit real keys. The repo ignores `.env`; sample values live in `.env.example`.
 
 ---
 
 ## Tech stack
-**Frontend (Flutter/Dart)** — provider, shared_preferences, hive, file_picker. Targets: Android · Web · Windows.  
-**Backend (Python/FastAPI)** — uvicorn, httpx, sse-starlette. PDF: PyMuPDF + pdf2image + Tesseract (OCR). STT: Whisper (OpenAI).  
-**LLM** — OpenAI-compatible endpoint (default **gpt-oss-20b**), optional OpenAI / Anthropic / Replicate or local vLLM/Ollama.  
-**Infra** — Docker / Docker Compose; deployable to Cloud Run / Railway / Render.  
-**Storage** — client-side (no server DB).
+
+- **Client:** Flutter/Dart (`provider`, `shared_preferences`, `hive`, `ffmpeg_kit_flutter_new`, etc.)
+- **Server:** Python 3.11, FastAPI, Uvicorn, `httpx`, `sse-starlette`
+- **LLM:** **gpt‑oss‑20b** (primary, OpenAI open model) with provider‑swap capability
+- **Transcription:** Whisper
+- **OCR & PDF:** PyMuPDF, pdf2image, Tesseract
+- **TTS:** gTTS
+- **Packaging/Infra:** Docker, Compose (ready for Cloud Run / Railway / Render)
 
 ---
 
-## One-minute review path
-1. Open the app (Web/Windows/Android).
-2. **Add content** → paste a short paragraph or upload a small PDF.
-3. Tap **Analyze** and watch summary, concept map and a quiz appear.
-4. Try **Study methods** (Memorization / Deep Understanding / Quiz).
-5. **Export** as Markdown/PDF or **Speak** to MP3.
+## Why it matters
+
+Learners spend *time* collecting and organizing notes. LearnSynth compresses that into seconds, turning arbitrary inputs into structured, multi‑modal study kits that actually stick.
+
+---
+
+## Roadmap
+
+- In‑app editing for concept maps
+- Better quiz validation + distractor quality
+- Model selector (when multiple OSS endpoints are available)
+- iOS packaging & macOS build
 
 ---
 
 ## License
-MIT (see `LICENSE`). Third-party models/libraries are under their own licenses.
 
+MIT — see `LICENSE`.
 
-This project is released under the MIT License (see `LICENSE`).  Model weights
-belong to their respective authors (e.g. Meta for Llama‑3.1).  Spacy and other
-third‑party libraries are used under their respective licenses.
-
-MIT — ver `LICENSE`. Atribuciones en `THIRD_PARTY_NOTICES.md`.
-
----
-
-**¡Gracias por probar LearnSynth!** Los jueces podrán ir directo con los enlaces de arriba (Website, Demo, APK, Windows).
