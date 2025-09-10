@@ -12,7 +12,7 @@ import 'llm_adapter.dart';
 import 'backend_adapter.dart';
 import 'local_adapter.dart';
 import 'analyze_result.dart';
-import '../config/env.dart';
+import 'package:learnsynth/config/env.dart';
 
 /// Modes for selecting the LLM backend.
 enum BackendMode { replicate, local }
@@ -58,8 +58,10 @@ class LlmService extends ChangeNotifier {
     _prefs = await SharedPreferences.getInstance();
     final modeStr = _prefs!.getString('llm_mode');
     if (modeStr != null) {
-      _mode = BackendMode.values
-          .firstWhere((e) => e.name == modeStr, orElse: () => BackendMode.replicate);
+      _mode = BackendMode.values.firstWhere(
+        (e) => e.name == modeStr,
+        orElse: () => BackendMode.replicate,
+      );
     }
     _modelPath = _prefs!.getString('llm_model_path');
     if (!Env.enableOfflineLLM ||
@@ -90,9 +92,7 @@ class LlmService extends ChangeNotifier {
   Future<void> setMode(BackendMode m) async {
     if (m == BackendMode.local) {
       final physical = caps.isAndroid ? await caps.isPhysicalDevice : false;
-      if (!Env.enableOfflineLLM ||
-          !caps.supportsLocalLlm ||
-          !physical) {
+      if (!Env.enableOfflineLLM || !caps.supportsLocalLlm || !physical) {
         _mode = BackendMode.replicate;
         await _prefs?.setString('llm_mode', _mode.name);
         notifyListeners();
@@ -136,12 +136,18 @@ class LlmService extends ChangeNotifier {
   }
 
   /// Descarga por ID del manifest, guarda en /files/models, persiste y (si está en modo local) carga el modelo.
-  Future<bool> downloadAndSelectById(String modelId, {void Function(double p)? onProgress}) async {
+  Future<bool> downloadAndSelectById(
+    String modelId, {
+    void Function(double p)? onProgress,
+  }) async {
     if (!Env.enableOfflineLLM) {
       throw UnsupportedError('Offline LLM disabled');
     }
     final models = await _catalog.fetch();
-    final m = models.firstWhere((x) => x.id == modelId, orElse: () => throw Exception('Modelo no encontrado: $modelId'));
+    final m = models.firstWhere(
+      (x) => x.id == modelId,
+      orElse: () => throw Exception('Modelo no encontrado: $modelId'),
+    );
 
     final file = await _downloader.downloadModel(
       filename: m.name,
@@ -197,7 +203,8 @@ class LlmService extends ChangeNotifier {
   /// Re-detecta un .gguf ya presente y lo carga si estás en modo local.
   Future<bool> rescanAndLoadExisting() async {
     if (!Env.enableOfflineLLM) return false;
-    final ok = await ensureLocalModelSelected(); // tu método actual de autodetección
+    final ok =
+        await ensureLocalModelSelected(); // tu método actual de autodetección
     if (!ok) return false;
     if (_mode == BackendMode.local) {
       await _backend?.dispose();
@@ -255,4 +262,3 @@ class LlmService extends ChangeNotifier {
     return (res, pack);
   }
 }
-
